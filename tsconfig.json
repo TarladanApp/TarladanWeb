@@ -1,0 +1,33 @@
+{
+    "compilerOptions": {
+      "target": "es5",            // Hedef JavaScript sürümü (es5 genellikle tarayıcı uyumluluğu için iyidir)
+      "module": "commonjs",       // Modül sistemi (Node.js için commonjs, tarayıcı için esnext veya umd olabilir)
+      "jsx": "react",             // JSX desteği (React kullanıyorsanız)
+      "strict": true,           // Katı tip denetimi (önerilir)
+      "esModuleInterop": true,  // CommonJS modüllerini ES modülleri gibi içe aktarmaya izin verir
+      "skipLibCheck": true,     // Kütüphane tanımlarını kontrol etmeyi atla (derleme hızını artırır)
+      "forceConsistentCasingInFileNames": true, // Dosya adlarında tutarlı büyük/küçük harf kullanımını zorla
+      "moduleResolution": "node", // Modül çözümleme stratejisi
+      "resolveJsonModule": true,  // JSON dosyalarını modül olarak içe aktarmaya izin verir
+      "outDir": "./dist",         // Derlenmiş JavaScript dosyalarının çıktığı dizin
+      "baseUrl": "./src",         // Modüllerin aranacağı temel dizin
+      "allowJs": true,          // JavaScript dosyalarının derlenmesine izin ver
+      "noImplicitAny": false,   // örtülü any tipine izin ver
+      "lib": [
+        "dom",                 // DOM API'lerini içer
+        "es2015",
+        "es2016",
+        "es2017",
+        "es2018",
+        "esnext"              // En son JavaScript özelliklerini içer
+      ]
+    },
+    "include": [
+      "src/**/*"              // Derlenecek dosyaları belirtir (src dizinindeki tüm dosyalar ve alt dizinler)
+    ],
+    "exclude": [
+      "node_modules",          // Derlenmeyecek dosyaları belirtir (node_modules dizini)
+      "**/*.test.ts",          // Test dosyalarını hariç tut
+      "**/*.spec.ts"
+    ]
+  }
