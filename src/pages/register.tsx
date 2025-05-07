@@ -70,10 +70,25 @@ export default function Register() {
       width: '100%',
 
     }}>
-      <p style={{ color: '#fff', fontWeight: 600, fontSize: 22, letterSpacing: 1, marginBottom: 12, marginTop: 10 }}>GİRİŞ SAYFASI</p>
       <img src={require('../assets/brand-logo.png')} alt="Logo" style={{ width: 64, marginBottom: 18, marginTop: 0 }} />
       <h1 style={{ color: '#f8faf3', fontWeight: 800, fontSize: 38, marginBottom: 0, letterSpacing: 1, textAlign: 'center', textShadow: '0 2px 8px #0004' }}>ÇİFTÇİ KAYIT FORMU</h1>
-      <p style={{ color: '#b6ffb6', marginTop: 0, marginBottom: 32, fontWeight: 500, fontSize: 18, textAlign: 'center' }}>Giriş Sayfası</p>
+      <p
+        onClick={() => window.location.href = '/login'}
+        style={{
+          color: '#b6ffb6',
+          marginTop: 0,
+          marginBottom: 32,
+          fontWeight: 500,
+          fontSize: 18,
+          textAlign: 'center',
+          cursor: 'pointer',
+          textDecoration: 'underline',
+          transition: 'color 0.2s',
+        }}
+        title="Giriş sayfasına git"
+      >
+        Giriş Sayfası
+      </p>
       <form
         onSubmit={handleSubmit}
         style={{

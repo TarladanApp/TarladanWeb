@@ -8,7 +8,7 @@ export default function MainPage() {
     <div
       style={{
         height: '100vh',
-        background: 'linear-gradient(135deg, #698B69)',
+        background: '#698B69',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -29,7 +29,7 @@ export default function MainPage() {
       <button
         onClick={() => navigate('/register')}
         style={{
-          background: '#1D7021',
+          background: '#40693E',
           color: '#fff',
           border: 'none',
           borderRadius: 8,
@@ -39,9 +39,29 @@ export default function MainPage() {
           cursor: 'pointer',
           boxShadow: '0 4px 16px #00000022',
           transition: 'background 0.2s',
+          width: 220,
         }}
       >
-        Kayıt Ol
+        Kayıt Ol 
+      </button>
+      <button
+        onClick={() => navigate('/login')}
+        style={{
+          background: '#40693E',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 8,
+          padding: '16px 40px',
+          fontSize: 22,
+          fontWeight: 600,
+          marginTop: 20,
+          cursor: 'pointer',
+          boxShadow: '0 4px 16px #00000022',
+          transition: 'background 0.2s',
+          width: 220,
+        }}
+      >
+        Giriş Yap
       </button>
     </div>
   );
