@@ -16,7 +16,8 @@ export default function Login() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Giriş başarılı!');
+    // alert('Giriş başarılı!');
+    navigate('/dashboard');
   };
 
   return (
