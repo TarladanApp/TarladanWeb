@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { registerFarmer } from '../services/api';
 
 const initialState = {
   firstName: '',
@@ -20,6 +21,8 @@ const initialState = {
 export default function Register() {
   const [form, setForm] = useState(initialState);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, files } = e.target;
@@ -47,13 +50,38 @@ export default function Register() {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
     const validationErrors = validate();
     setErrors(validationErrors);
+
     if (Object.keys(validationErrors).length === 0) {
-      alert('Kayıt başarılı!');
-      setForm(initialState);
+      try {
+        setIsLoading(true);
+        // Doğum tarihinden yaş hesaplama
+        const birthDate = new Date(form.birthDate);
+        const today = new Date();
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) 
+          ? age - 1 
+          : age;
+
+        const response = await registerFarmer({
+          ...form,
+          age: calculatedAge.toString()
+        });
+
+        if (response.success) {
+          alert('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz.');
+          window.location.href = '/login';
+        }
+      } catch (error: any) {
+        setSubmitError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -68,7 +96,6 @@ export default function Register() {
       fontFamily: 'Inter, Arial, sans-serif',
       marginRight: 10,
       width: '100%',
-
     }}>
       <img src={require('../assets/brand-logo.png')} alt="Logo" style={{ width: 64, marginBottom: 18, marginTop: 0 }} />
       <h1 style={{ color: '#f8faf3', fontWeight: 800, fontSize: 38, marginBottom: 0, letterSpacing: 1, textAlign: 'center', textShadow: '0 2px 8px #0004' }}>ÇİFTÇİ KAYIT FORMU</h1>
@@ -89,6 +116,20 @@ export default function Register() {
       >
         Giriş Sayfası
       </p>
+      {submitError && (
+        <div style={{
+          color: '#d32f2f',
+          background: '#ffebee',
+          padding: '12px 24px',
+          borderRadius: 8,
+          marginBottom: 20,
+          textAlign: 'center',
+          maxWidth: 900,
+          width: '85vw',
+        }}>
+          {submitError}
+        </div>
+      )}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -173,9 +214,10 @@ export default function Register() {
         </div>    
         <button
           type="submit"
+          disabled={isLoading}
           style={{
             gridColumn: '1/3',
-            background: 'linear-gradient(90deg, #1D7001 0%, #269900 100%)',
+            background: isLoading ? '#ccc' : 'linear-gradient(90deg, #1D7001 0%, #269900 100%)',
             color: '#fff',
             border: 'none',
             marginRight: 10,
@@ -183,21 +225,19 @@ export default function Register() {
             padding: '16px 0',
             fontSize: 20,
             fontWeight: 700,
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             marginTop: 10,
             letterSpacing: 1,
             boxShadow: '0 4px 16px #1d700133',
             transition: 'all 0.2s',
           }}
         >
-          FORMU GÖNDER
+          {isLoading ? 'GÖNDERİLİYOR...' : 'FORMU GÖNDER'}
         </button> 
       </form>
-
     </div>
   );
 }
-
 
 const inputStyle: React.CSSProperties = {
   width: '95%',
@@ -205,8 +245,8 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   border: '1.5px solid #d1d5db',
   marginTop: 6,
-  flex:2,
-  marginRight:1,
+  flex: 2,
+  marginRight: 1,
   marginBottom: 4,
   fontSize: 17,
   background: '#f5f5ef',
