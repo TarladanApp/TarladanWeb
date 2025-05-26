@@ -14,7 +14,7 @@ const initialState = {
   neighborhood: '',
   farmName: '',
   tcNo: '',
-  farmer_certificates: null as File | null,
+  farmer_certificates_file: null as File | null,
   birthDate: '',
 };
 
@@ -26,7 +26,7 @@ export default function Register() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, files } = e.target;
-    if (name === 'farmer_certificates') {
+    if (name === 'farmer_certificates_file') {
       setForm({ ...form, [name]: files ? files[0] : null });
     } else {
       setForm({ ...form, [name]: value });
@@ -68,17 +68,42 @@ export default function Register() {
           ? age - 1 
           : age;
 
-        const response = await registerFarmer({
-          ...form,
-          age: calculatedAge.toString()
-        });
+        // FormData objesi oluştur
+        const formData = new FormData();
+
+        // Form verilerini FormData'ya ekle
+        formData.append('farmer_password', form.password);
+        formData.append('farmer_name', form.firstName);
+        formData.append('farmer_last_name', form.lastName);
+        formData.append('farmer_age', calculatedAge.toString());
+        formData.append('farmer_address', form.address);
+        formData.append('farmer_city', form.city);
+        formData.append('farmer_town', form.district);
+        formData.append('famer_neighbourhood', form.neighborhood);
+        formData.append('farmer_phone_number', form.phone);
+        formData.append('farmer_mail', form.email);
+        formData.append('farmer_activity_status', 'NonActive'); // Varsayılan değer
+        formData.append('farm_name', form.farmName);
+        formData.append('farmer_tc_no', form.tcNo);
+        // imgurl boş veya null ise eklemeyebiliriz ya da boş string olarak ekleyebiliriz
+        if (form.imgurl) formData.append('imgurl', form.imgurl); // imgurl DTO'da var ama form state'inde yok, eklenmesi gerekebilir
+
+        // Sertifika dosyasını ekle (varsa)
+        if (form.farmer_certificates_file) {
+          formData.append('farmer_certificates_file', form.farmer_certificates_file);
+        }
+
+        const response = await registerFarmer(formData); // FormData'yı gönder
 
         if (response.success) {
           alert('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz.');
           window.location.href = '/login';
+        } else {
+          // Supabase veya backend'den gelen hata mesajını göster
+          setSubmitError(response.message || 'Kayıt işlemi başarısız oldu');
         }
       } catch (error: any) {
-        setSubmitError(error.message);
+        setSubmitError(error.message || 'Bir hata oluştu.');
       } finally {
         setIsLoading(false);
       }
@@ -132,6 +157,7 @@ export default function Register() {
       )}
       <form
         onSubmit={handleSubmit}
+        encType="multipart/form-data"
         style={{
           alignItems: 'center',
           background: '#f8faf3',
@@ -210,7 +236,7 @@ export default function Register() {
         </div>
         <div style={{ gridColumn: '1/3' }}>
           <label>Sertifikalar (opsiyonel)</label>
-          <input name="farmer_certificates" type="file" onChange={handleChange} style={inputStyle} />
+          <input name="farmer_certificates_file" type="file" onChange={handleChange} style={inputStyle} />
         </div>    
         <button
           type="submit"

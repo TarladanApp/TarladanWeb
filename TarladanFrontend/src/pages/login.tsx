@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginFarmer } from '../services/api';
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -7,6 +8,8 @@ export default function Login() {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -14,10 +17,31 @@ export default function Login() {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // alert('Giriş başarılı!');
-    navigate('/dashboard');
+    setSubmitError('');
+    setIsLoading(true);
+    try {
+      // 'identifier' alanını e-posta olarak varsayıyoruz.
+      // Eğer hem e-posta hem telefon ile giriş gerekiyorsa backend'de ayrı bir doğrulama yapılmalı.
+      const response = await loginFarmer({
+        farmer_mail: form.identifier,
+        farmer_password: form.password,
+      });
+
+      if (response.success) {
+        alert('Giriş başarılı!');
+        // Başarılı girişte Supabase Auth session'ı otomatik yönetir.
+        // Frontend'de kullanıcı bilgilerini veya session'ı saklamak için Context API vb. kullanılabilir.
+        navigate('/dashboard');
+      } else {
+        setSubmitError(response.message || 'Giriş işlemi başarısız oldu');
+      }
+    } catch (error: any) {
+      setSubmitError(error.message || 'Bir hata oluştu.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -131,6 +155,19 @@ export default function Login() {
           GİRİŞ YAP
         </button>
       </form>
+      {submitError && (
+        <div style={{
+          color: '#d32f2f',
+          background: '#ffebee',
+          padding: '12px 24px',
+          borderRadius: 8,
+          marginTop: 20,
+          textAlign: 'center',
+          maxWidth: 400,
+        }}>
+          {submitError}
+        </div>
+      )}
     </div>
   );
 }
