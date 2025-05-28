@@ -33,7 +33,7 @@ export default function Login() {
         alert('Giriş başarılı!');
         // Başarılı girişte Supabase Auth session'ı otomatik yönetir.
         // Frontend'de kullanıcı bilgilerini veya session'ı saklamak için Context API vb. kullanılabilir.
-        navigate('/dashboard');
+    navigate('/dashboard');
       } else {
         setSubmitError(response.message || 'Giriş işlemi başarısız oldu');
       }

@@ -7,4 +7,15 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Supabase URL ve Key değerleri eksik!');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey); 
+// Singleton pattern ile tek bir instance oluştur
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
+
+export const getSupabaseClient = () => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseKey);
+  }
+  return supabaseInstance;
+};
+
+// Geriye dönük uyumluluk için
+export const supabase = getSupabaseClient(); 

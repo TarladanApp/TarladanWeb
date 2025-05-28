@@ -1,5 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
+import { useNavigate } from 'react-router-dom';
+import { createClient } from '@supabase/supabase-js';
+
 const categories = [
   { value: '', label: 'Select' },
   { value: 'vegetable', label: 'Vegetable' },
@@ -7,11 +10,7 @@ const categories = [
   { value: 'grain', label: 'Grain' },
 ];
 
-const initialProducts = [
-  { name: 'Tomatoes', category: 'Vegetable', price: 2.0, stock: 100 },
-  { name: 'Carrots', category: 'Vegetable', price: 1.5, stock: 200 },
-  { name: 'Apples', category: 'Fruit', price: 3.0, stock: 50 },
-];
+const initialProducts: any[] = []; // Başlangıçta boş dizi
 
 function getCroppedImg(imageSrc: string, crop: any, zoom: number, aspect: number, size = 82) {
   return new Promise<string>((resolve, reject) => {
@@ -47,12 +46,14 @@ export default function Dashboard() {
     imagePreview: '',
   });
   const [products, setProducts] = useState(initialProducts);
-  const [farmInfo, setFarmInfo] = useState({
+  const [farmInfo, setFarmInfo] = useState<{ intro: string; image: File | null; imagePreview: string | null; cert: File | null }>(
+    {
     intro: '',
-    image: '',
-    imagePreview: '',
-    cert: '',
-  });
+      image: null,
+      imagePreview: null,
+      cert: null,
+    }
+  );
   const [tab, setTab] = useState<'product' | 'farm'>('product');
   const [cropModal, setCropModal] = useState(false);
   const [cropImg, setCropImg] = useState('');
@@ -61,11 +62,205 @@ export default function Dashboard() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [editMode, setEditMode] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navigate = useNavigate();
+
+  // Supabase client instance
+  const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || '';
+  const supabaseKey = process.env.REACT_APP_SUPABASE_KEY || '';
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Ürünleri backend'den çekme fonksiyonu
+  const fetchProducts = async (farmerId: string, authToken: string) => {
+    try {
+      // TODO: Backend API URL'ini buraya ekleyin veya env dosyasından alın
+      const response = await fetch(`YOUR_BACKEND_API_URL/product/farmer/${farmerId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Ürünler getirilirken bir hata oluştu.');
+      }
+
+      const productsData = await response.json();
+      console.log('Ürünler başarıyla getirildi:', productsData);
+
+      // Backend'den gelen ürün listesini state'e yükle
+      // TODO: Backend'den gelen product_id'yi de state'e dahil et
+      setProducts(productsData.map((p: any) => ({
+        name: p.product_name,
+        category: p.product_katalog_name,
+        price: p.farmer_price,
+        stock: p.stock_quantity,
+        id: p.product_id, // product_id eklendi
+      })));
+
+    } catch (error: any) {
+      console.error('Ürünleri getirme hatası:', error.message);
+      alert(`Ürünler getirilirken hata oluştu: ${error.message}`);
+    }
+  };
+
+  // Component yüklendiğinde veya kullanıcı session'ı değiştiğinde ürünleri çek
+  useEffect(() => {
+    const getProducts = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const farmerId = session?.user?.id; // Supabase user id farmer_id olarak kullanılabilir
+      const authToken = session?.access_token;
+
+      if (farmerId && authToken) {
+        fetchProducts(farmerId, authToken);
+      } else {
+        // Kullanıcı login değilse veya session yoksa ürün listesini temizle
+        setProducts([]);
+        // İsteğe bağlı: Kullanıcıyı login sayfasına yönlendir
+        // navigate('/login');
+      }
+    };
+
+    getProducts();
+
+    // Supabase auth state değişimlerini dinle (isteğe bağlı ama iyi olur)
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Session değiştiğinde ürünleri tekrar çek
+      const farmerId = session?.user?.id;
+      const authToken = session?.access_token;
+      if (farmerId && authToken) {
+         fetchProducts(farmerId, authToken);
+      } else {
+         setProducts([]);
+      }
+    });
+
+    // Component unmount edildiğinde listener'ı temizle
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+
+  }, [supabase, navigate]); // Dependency array'e supabase ve navigate eklendi
+
+  // Logout fonksiyonu
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Çıkış yaparken hata:', error);
+      alert('Çıkış yapılırken bir hata oluştu.');
+    } else {
+      // Çıkış başarılı, login sayfasına yönlendir
+      navigate('/login');
+    }
+  };
+
+  // Ürün ekleme
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Oturum bulunamadı');
+      }
+
+      const farmerId = session.user.id;
+      const authToken = session.access_token;
+
+      // 1. Önce ürün bilgilerini (resimsiz) gönder
+      const productPayload = {
+        product_katalog_name: categories.find(c => c.value === product.category)?.label || '',
+        farmer_price: parseFloat(product.price),
+        product_name: product.name,
+        stock_quantity: parseInt(product.stock),
+      };
+
+      const productResponse = await fetch(`${process.env.REACT_APP_API_URL}/product`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(productPayload),
+      });
+
+      if (!productResponse.ok) {
+        const errorData = await productResponse.json();
+        throw new Error(errorData.message || 'Ürün eklenirken bir hata oluştu.');
+      }
+
+      const newProduct = await productResponse.json();
+      console.log('Ürün başarıyla eklendi:', newProduct);
+
+      // 2. Eğer resim varsa, ayrı bir istek ile resmi yükle
+      if (product.image) {
+        const formData = new FormData();
+        formData.append('image', product.image);
+
+        const imageResponse = await fetch(`${process.env.REACT_APP_API_URL}/product/${newProduct.product_id}/image`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+          },
+          body: formData,
+        });
+
+        if (!imageResponse.ok) {
+          const errorData = await imageResponse.json();
+          throw new Error(errorData.message || 'Resim yüklenirken bir hata oluştu.');
+        }
+
+        const imageData = await imageResponse.json();
+        console.log('Resim başarıyla yüklendi:', imageData);
+      }
+
+      // Ürün listesini güncelle
+      setProducts(prevProducts => [...prevProducts, {
+        id: newProduct.product_id,
+        name: newProduct.product_name,
+        category: newProduct.product_katalog_name,
+        price: newProduct.farmer_price,
+        stock: newProduct.stock_quantity,
+        image: product.image
+      }]);
+
+      // Formu temizle
+      setProduct({ 
+        name: '', 
+        category: '', 
+        description: '', 
+        price: '', 
+        stock: '', 
+        image: '', 
+        imagePreview: '' 
+      });
+
+      alert('Ürün başarıyla eklendi!');
+
+    } catch (error: any) {
+      console.error('Ürün ekleme hatası:', error.message);
+      alert(`Ürün eklenirken hata oluştu: ${error.message}`);
+    }
+  };
 
   // Ürün görseli yükleme (crop ile)
   const handleProductImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Dosya boyutu kontrolü (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Dosya boyutu 5MB\'dan küçük olmalıdır.');
+        return;
+      }
+
+      // Dosya tipi kontrolü
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        alert('Sadece JPEG, PNG ve WebP formatları desteklenmektedir.');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         setCropImg(reader.result as string);
@@ -81,10 +276,15 @@ export default function Dashboard() {
 
   const handleCropSave = async () => {
     if (cropImg && croppedAreaPixels) {
-      const cropped = await getCroppedImg(cropImg, croppedAreaPixels, zoom, 1, 82);
-      setProduct({ ...product, image: cropped, imagePreview: cropped });
-      setCropModal(false);
-      setCropImg('');
+      try {
+        const cropped = await getCroppedImg(cropImg, croppedAreaPixels, zoom, 1, 82);
+        setProduct({ ...product, image: cropped, imagePreview: cropped });
+        setCropModal(false);
+        setCropImg('');
+      } catch (error) {
+        console.error('Görsel kırpma hatası:', error);
+        alert('Görsel kırpılırken bir hata oluştu.');
+      }
     }
   };
 
@@ -104,36 +304,73 @@ export default function Dashboard() {
     }
   };
 
-  // Ürün ekleme
-  const handleAddProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    setProducts([
-      ...products,
-      {
-        name: product.name,
-        category: categories.find(c => c.value === product.category)?.label || '',
-        price: parseFloat(product.price),
-        stock: parseInt(product.stock),
-      },
-    ]);
-    setProduct({ name: '', category: '', description: '', price: '', stock: '', image: '', imagePreview: '' });
-  };
-
   // Ürün güncelleme
-  const handleUpdateProduct = (e: React.FormEvent) => {
+  const handleUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (editIndex !== null) {
-      const updatedProducts = [...products];
-      updatedProducts[editIndex] = {
-        name: product.name,
-        category: categories.find(c => c.value === product.category)?.label || '',
-        price: parseFloat(product.price),
-        stock: parseInt(product.stock),
+
+      // Backend API'sine göndereceğimiz güncel veri
+      const updatePayload = {
+        product_katalog_name: categories.find(c => c.value === product.category)?.label || '',
+        farmer_price: parseFloat(product.price),
+        product_name: product.name,
+        stock_quantity: parseInt(product.stock),
+        // image şimdilik hariç
+      };
+
+      // Güncellenecek ürünün ID'si. Bu bilgi şu anda `products` state'inde yok.
+      // TODO: Ürünleri backend'den çekerken product_id'yi de kaydetmeliyiz.
+      // Şimdilik placeholder kullanalım.
+      const productId = products[editIndex].id; // Ürün objesinde id olduğunu varsayalım
+
+      try {
+        // Backend API endpoint'ini çağır
+        // TODO: Backend API URL'ini buraya ekleyin veya env dosyasından alın
+        // TODO: Kimlik doğrulama token'ını ekleyin
+        const response = await fetch(`YOUR_BACKEND_API_URL/product/${productId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer YOUR_AUTH_TOKEN`,
+          },
+          body: JSON.stringify(updatePayload),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Ürün güncellenirken bir hata oluştu.');
+        }
+
+        const updatedProduct = await response.json();
+        console.log('Ürün başarıyla güncellendi:', updatedProduct);
+
+        // Ürün başarıyla güncellendiyse listeyi yenile
+        // TODO: Ürün listesini backend'den tekrar çekmek daha iyi olur
+        // Şimdilik güncellenen ürünü listede bulup değiştirelim
+        const updatedProducts = [...products];
+        // Burada updatedProducts[editIndex] = updatedProduct; gibi bir atama yapabiliriz
+        // Ancak backend'den gelen updatedProduct objesinin yapısı frontend'deki product objesi ile aynı olmalı
+        // Şimdilik sadece frontend state'ini güncelleyelim.
+        updatedProducts[editIndex] = {
+          name: updatedProduct.product_name || updatedProducts[editIndex].name,
+          category: updatedProduct.product_katalog_name || updatedProducts[editIndex].category,
+          price: updatedProduct.farmer_price || updatedProducts[editIndex].price,
+          stock: updatedProduct.stock_quantity || updatedProducts[editIndex].stock,
       };
       setProducts(updatedProducts);
+
+        // Formu temizle ve düzenleme modundan çık
       setProduct({ name: '', category: '', description: '', price: '', stock: '', image: '', imagePreview: '' });
       setEditMode(false);
       setEditIndex(null);
+
+        alert('Ürün başarıyla güncellendi!');
+
+      } catch (error: any) {
+        console.error('Ürün güncelleme hatası:', error.message);
+        alert(`Ürün güncellenirken hata oluştu: ${error.message}`);
+      }
     }
   };
 
@@ -154,14 +391,113 @@ export default function Dashboard() {
   };
 
   // Ürün silme
-  const handleDelete = (idx: number) => {
+  const handleDelete = async (idx: number) => {
+    // Silinecek ürünün ID'si. Bu bilgi şu anda `products` state'inde yok.
+    // TODO: Ürünleri backend'den çekerken product_id'yi de kaydetmeliyiz.
+    // Şimdilik placeholder kullanalım.
+    const productId = products[idx].id; // Ürün objesinde id olduğunu varsayalım
+
+    try {
+      // Backend API endpoint'ini çağır
+      // TODO: Backend API URL'ini buraya ekleyin veya env dosyasından alın
+      // TODO: Kimlik doğrulama token'ını ekleyin
+      const response = await fetch(`YOUR_BACKEND_API_URL/product/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer YOUR_AUTH_TOKEN`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Ürün silinirken bir hata oluştu.');
+      }
+
+      console.log('Ürün başarıyla silindi:');
+
+      // Ürün başarıyla silindiyse listeyi güncelle
+      // TODO: Ürün listesini backend'den tekrar çekmek daha iyi olur
+      // Şimdilik sadece frontend state'ini güncelle
     setProducts(products.filter((_, i) => i !== idx));
+
+      alert('Ürün başarıyla silindi!');
+
+    } catch (error: any) {
+      console.error('Ürün silme hatası:', error.message);
+      alert(`Ürün silinirken hata oluştu: ${error.message}`);
+    }
   };
 
+  // Menü açılıp kapanma efekti
+  useEffect(() => {
+    const sidebar = document.querySelector('.dashboard-sidebar');
+    if (sidebar) {
+      if (isMobileMenuOpen) {
+        sidebar.classList.add('mobile-menu-open');
+        document.body.style.overflow = 'hidden';
+      } else {
+        sidebar.classList.remove('mobile-menu-open');
+        document.body.style.overflow = '';
+      }
+    }
+  }, [isMobileMenuOpen]);
+
+  // Menü dışına tıklandığında kapanma
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      const menuButton = document.querySelector('.mobile-menu-button');
+      
+      if (isMobileMenuOpen && 
+          sidebar && 
+          !sidebar.contains(event.target as Node) && 
+          menuButton && 
+          !menuButton.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMobileMenuOpen]);
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#FAF8F3' }}>
-      {/* Sol Menü */}
-      <aside style={{ width: 220, background: '#F5F2EA', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#FAF8F3' }} className={`dashboard-container ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
+      {/* Hamburger Menü Butonu - Sadece mobilde görünür */}
+      <button 
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        style={{
+          display: 'none',
+          position: 'fixed',
+          top: 16,
+          left: 16,
+          zIndex: 1000,
+          background: '#F5F2EA',
+          border: 'none',
+          borderRadius: 8,
+          padding: 8,
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px #0002'
+        }}
+        className="mobile-menu-button"
+      >
+        <div style={{ width: 24, height: 2, background: '#A18249', margin: '4px 0' }}></div>
+        <div style={{ width: 24, height: 2, background: '#A18249', margin: '4px 0' }}></div>
+        <div style={{ width: 24, height: 2, background: '#A18249', margin: '4px 0' }}></div>
+      </button>
+
+      {/* Sol Menü / Mobil Menü */}
+      <aside style={{ 
+        width: 220, 
+        background: '#F5F2EA', 
+        padding: 24, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 16,
+        transition: 'all 0.3s ease',
+        position: 'relative',
+        zIndex: 100
+      }} className="dashboard-sidebar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
           <img src={require('../assets/brand-logo.png')} alt="logo" style={{ width: 40, borderRadius: '50%' }} />
           <div>
@@ -171,17 +507,28 @@ export default function Dashboard() {
         </div>
         <button style={tab==='product'?menuActive:menuBtn} onClick={()=>setTab('product')}>Panelim</button>
         <button style={tab==='farm'?menuActive:menuBtn} onClick={()=>setTab('farm')}>Çiftliğim</button>
+        <button style={logoutBtn} onClick={handleLogout}>Çıkış</button>
       </aside>
+
       {/* Ana İçerik */}
-      <main style={{ flex: 1, padding: '32px 48px' }}>
+      <main style={{ flex: 1, padding: '32px 48px' }} className="dashboard-main-content">
         {/* Üst Menü */}
-        <nav style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 32, marginBottom: 24 }}>
-          <button style={logoutBtn}>Logout</button>
+        <nav style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          width: '100%',
+          marginBottom: 24,
+          padding: '16px 0',
+          borderBottom: '1px solid #E9DFCE'
+        }} className="dashboard-top-nav-large">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+            <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>Satış Panelim</h1>
+            <div style={{ color: '#A18249' }}>Ürünlerinizi ve Çiftliğinizi Yönetin</div>
+          </div>
         </nav>
-        <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 4 }}>Satış Panelim</h1>
-        <div style={{ color: '#A18249', marginBottom: 24 }}>Ürünlerinizi ve Çiftliğinizi Yönetin</div>
         {/* Tab menü */}
-        <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid #E9DFCE', marginBottom: 32 }}>
+        <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid #E9DFCE', marginBottom: 32 }} className="dashboard-tabs">
           <button style={tab==='product'?tabActive:tabBtn} onClick={()=>setTab('product')}>Ürün Yönetimi</button>
           <button style={tab==='farm'?tabActive:tabBtn} onClick={()=>setTab('farm')}>Mağaza Bilgileriniz</button>
         </div>
@@ -285,6 +632,25 @@ export default function Dashboard() {
           </section>
         )}
       </main>
+
+      {/* Mobil Menü Overlay */}
+      <div 
+        style={{
+          display: 'none',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: '#0008',
+          zIndex: 90,
+          opacity: isMobileMenuOpen ? 1 : 0,
+          visibility: isMobileMenuOpen ? 'visible' : 'hidden',
+          transition: 'all 0.3s ease'
+        }}
+        className="mobile-menu-overlay"
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
     </div>
   );
 }
@@ -376,3 +742,205 @@ const deleteBtn = {
   padding: '4px 12px',
   cursor: 'pointer',
 };
+
+// Mobil ve tablet uyumlu stiller için media query
+const styleSheet = document.createElement('style');
+styleSheet.innerHTML = `
+  /* Büyük ekranlarda yan menü */
+  .dashboard-sidebar {
+    display: flex;
+  }
+
+  /* Tablet ve daha küçük ekranlar için */
+  @media (max-width: 768px) {
+    .dashboard-container {
+      flex-direction: column;
+    }
+
+    .mobile-menu-button {
+      display: block !important;
+    }
+
+    .dashboard-sidebar {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      height: 100vh;
+      width: 280px;
+      padding: 80px 24px 24px;
+      transition: left 0.3s ease;
+      box-shadow: 2px 0 8px #0002;
+    }
+
+    .dashboard-sidebar.mobile-menu-open {
+      left: 0;
+    }
+
+    .dashboard-main-content {
+      padding: 12px;
+      margin-top:-1000px;
+      width: 100%;
+      box-sizing: border-box;
+      transform: translateX(0);
+      transition: transform 0.3s ease;
+      flex: none;
+    }
+
+    .dashboard-top-nav-large {
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    .dashboard-top-nav-large > div {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .dashboard-top-nav-large h1 {
+      font-size: 28px;
+    }
+
+    .dashboard-tabs {
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Form içindeki yan yana duran öğeler */
+    .form-row-responsive {
+      flex-direction: column;
+      gap: 0 !important;
+    }
+
+    .form-row-responsive label {
+      flex: unset !important;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    
+    /* Menü açıkken ana içeriği sağa kaydırma */
+    .dashboard-container.mobile-menu-open .dashboard-main-content {
+    }
+
+    /* Genel olarak ana içerikteki öğelerin taşmasını engelle */
+    .dashboard-main-content * {
+        box-sizing: border-box;
+    }
+
+     .dashboard-main-content table {
+        width: 100%;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+     .dashboard-main-content thead,
+     .dashboard-main-content tbody,
+     .dashboard-main-content th,
+     .dashboard-main-content td,
+     .dashboard-main-content tr {
+        display: block;
+    }
+
+     .dashboard-main-content tr {
+        position:top;
+        border: 1px solid #E9DFCE;
+        margin-bottom: 16px;
+        padding: 12px;
+        border-radius: 8px;
+     }
+
+     .dashboard-main-content td {
+        border: none;
+        position: relative;
+        padding-left: 130px;
+        margin-bottom: 8px;
+        word-wrap: break-word;
+        white-space: normal;
+     }
+
+     .dashboard-main-content td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: inline-block;
+        position: absolute;
+        left: 12px;
+        width: 110px;
+        margin-right: 16px;
+     }
+
+    .dashboard-main-content th {
+        display: none;
+    }
+
+  }
+
+  /* Sadece telefonlar için */
+  @media (max-width: 480px) {
+    .dashboard-main-content {
+      padding: 8px;
+      margin-top:-1000px;
+      width: 100%;
+      box-sizing: border-box;
+      transform: translateX(0);
+      transition: transform 0.3s ease;
+      flex: none;
+    }
+
+    /* Telefon görünümünde menü açıkken ana içeriği sağa kaydırma */
+    .dashboard-container.mobile-menu-open .dashboard-main-content {
+    }
+
+    .dashboard-top-nav-large {
+      padding: 4px 0;
+    }
+
+    .dashboard-tabs {
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .dashboard-tabs button {
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .dashboard-sidebar {
+      width: 100%;
+      left: -100%;
+    }
+
+    /* Form içindeki yan yana duran öğeler (telefon) */
+    .form-row-responsive {
+      flex-direction: column;
+      gap: 0 !important;
+    }
+
+    .form-row-responsive label {
+      flex: unset !important;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+     .dashboard-main-content td::before {
+        width: 90px;
+     }
+     
+     /* Genel olarak ana içerikteki öğelerin taşmasını engelle (telefon) */
+    .dashboard-main-content * {
+        box-sizing: border-box;
+    }
+  }
+
+  /* Menü açıkken body'nin scroll'unu engelle */
+  .mobile-menu-open body {
+      overflow: hidden;
+  }
+`;
+
+if (typeof window !== 'undefined' && !document.getElementById('dashboard-styles')) {
+  styleSheet.id = 'dashboard-styles';
+  document.head.appendChild(styleSheet);
+}

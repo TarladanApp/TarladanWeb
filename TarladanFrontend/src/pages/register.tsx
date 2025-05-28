@@ -16,6 +16,7 @@ const initialState = {
   tcNo: '',
   farmer_certificates_file: null as File | null,
   birthDate: '',
+  imgurl: null as string | null,
 };
 
 export default function Register() {
@@ -86,7 +87,9 @@ export default function Register() {
         formData.append('farm_name', form.farmName);
         formData.append('farmer_tc_no', form.tcNo);
         // imgurl boş veya null ise eklemeyebiliriz ya da boş string olarak ekleyebiliriz
-        if (form.imgurl) formData.append('imgurl', form.imgurl); // imgurl DTO'da var ama form state'inde yok, eklenmesi gerekebilir
+        if (form.imgurl) {
+          formData.append('imgurl', form.imgurl);
+        }
 
         // Sertifika dosyasını ekle (varsa)
         if (form.farmer_certificates_file) {
@@ -158,21 +161,14 @@ export default function Register() {
       <form
         onSubmit={handleSubmit}
         encType="multipart/form-data"
-        style={{
-          alignItems: 'center',
-          background: '#f8faf3',
-          padding: 40,
-          borderRadius: 18,
-          width: '85vw',
-          maxWidth: 900,
-          minWidth: 320,
-          boxShadow: '0 6px 32px #00000044',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 20,
-          margin: '0 auto',
-        }}
+        style={formStyle}
         className="responsive-register-form"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = '0 6px 30px #00000033';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = '0 6px 32px #00000044';
+        }}
       >
         <div>
           <label>İsim*</label>
@@ -288,20 +284,19 @@ const errorStyle: React.CSSProperties = {
 };
 
 // Mobil uyumlu form stili
-const formStyle: React.CSSProperties = {
+const formStyle = {
+  alignItems: 'center',
   background: '#f8faf3',
-  padding: 48,
-  borderRadius: 16,
-  minWidth: 500,
-  maxWidth: 800,
-  boxShadow: '0 4px 24px #00000022',
+  padding: 40,
+  borderRadius: 18,
+  width: '85vw',
+  maxWidth: 900,
+  minWidth: 320,
+  boxShadow: '0 6px 32px #00000044',
   display: 'grid',
-  gridTemplateColumns: '1.2fr 1.2fr',
+  gridTemplateColumns: '1fr 1fr',
   gap: 24,
   transition: 'all 0.3s ease',
-  ':hover': {
-    boxShadow: '0 6px 30px #00000033',
-  },
 };
 
 // Media query ile mobilde tek kolona düşür
