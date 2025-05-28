@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginFarmer } from '../services/api';
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -8,8 +7,6 @@ export default function Login() {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [submitError, setSubmitError] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -17,7 +14,7 @@ export default function Login() {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
     setIsLoading(true);
@@ -33,7 +30,7 @@ export default function Login() {
         alert('Giriş başarılı!');
         // Başarılı girişte Supabase Auth session'ı otomatik yönetir.
         // Frontend'de kullanıcı bilgilerini veya session'ı saklamak için Context API vb. kullanılabilir.
-    navigate('/dashboard');
+        navigate('/dashboard');
       } else {
         setSubmitError(response.message || 'Giriş işlemi başarısız oldu');
       }
@@ -155,19 +152,6 @@ export default function Login() {
           GİRİŞ YAP
         </button>
       </form>
-      {submitError && (
-        <div style={{
-          color: '#d32f2f',
-          background: '#ffebee',
-          padding: '12px 24px',
-          borderRadius: 8,
-          marginTop: 20,
-          textAlign: 'center',
-          maxWidth: 400,
-        }}>
-          {submitError}
-        </div>
-      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@ const initialState = {
   neighborhood: '',
   farmName: '',
   tcNo: '',
-  farmer_certificates_file: null as File | null,
+  farmer_certificates: null as File | null,
   birthDate: '',
   imgurl: null as string | null,
 };
@@ -27,7 +27,7 @@ export default function Register() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, files } = e.target;
-    if (name === 'farmer_certificates_file') {
+    if (name === 'farmer_certificates') {
       setForm({ ...form, [name]: files ? files[0] : null });
     } else {
       setForm({ ...form, [name]: value });
@@ -87,9 +87,7 @@ export default function Register() {
         formData.append('farm_name', form.farmName);
         formData.append('farmer_tc_no', form.tcNo);
         // imgurl boş veya null ise eklemeyebiliriz ya da boş string olarak ekleyebiliriz
-        if (form.imgurl) {
-          formData.append('imgurl', form.imgurl);
-        }
+        if (form.imgurl) formData.append('imgurl', form.imgurl); // imgurl DTO'da var ama form state'inde yok, eklenmesi gerekebilir
 
         // Sertifika dosyasını ekle (varsa)
         if (form.farmer_certificates_file) {
@@ -101,12 +99,9 @@ export default function Register() {
         if (response.success) {
           alert('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz.');
           window.location.href = '/login';
-        } else {
-          // Supabase veya backend'den gelen hata mesajını göster
-          setSubmitError(response.message || 'Kayıt işlemi başarısız oldu');
         }
       } catch (error: any) {
-        setSubmitError(error.message || 'Bir hata oluştu.');
+        setSubmitError(error.message);
       } finally {
         setIsLoading(false);
       }
@@ -161,7 +156,20 @@ export default function Register() {
       <form
         onSubmit={handleSubmit}
         encType="multipart/form-data"
-        style={formStyle}
+        style={{
+          alignItems: 'center',
+          background: '#f8faf3',
+          padding: 40,
+          borderRadius: 18,
+          width: '85vw',
+          maxWidth: 900,
+          minWidth: 320,
+          boxShadow: '0 6px 32px #00000044',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 20,
+          margin: '0 auto',
+        }}
         className="responsive-register-form"
         onMouseEnter={(e) => {
           e.currentTarget.style.boxShadow = '0 6px 30px #00000033';
@@ -232,7 +240,7 @@ export default function Register() {
         </div>
         <div style={{ gridColumn: '1/3' }}>
           <label>Sertifikalar (opsiyonel)</label>
-          <input name="farmer_certificates_file" type="file" onChange={handleChange} style={inputStyle} />
+          <input name="farmer_certificates" type="file" onChange={handleChange} style={inputStyle} />
         </div>    
         <button
           type="submit"
