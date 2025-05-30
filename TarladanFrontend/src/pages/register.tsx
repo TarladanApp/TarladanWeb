@@ -51,6 +51,24 @@ export default function Register() {
     return newErrors;
   };
 
+  // Backend alan adlarını frontend alan adlarına eşleyecek bir fonksiyon
+  const backendToFrontendField: { [key: string]: string } = {
+    farmer_password: 'password',
+    farmer_name: 'firstName',
+    farmer_last_name: 'lastName',
+    farmer_age: 'birthDate', // Yaş doğum tarihinden hesaplanıyor
+    farmer_address: 'address',
+    farmer_city: 'city',
+    farmer_town: 'district',
+    farmer_neighbourhood: 'neighborhood',
+    farmer_phone_number: 'phone',
+    farmer_mail: 'email',
+    farmer_activity_status: '', // Formda yok, validasyon hatası gelirse genel hata olarak gösterilebilir
+    farm_name: 'farmName',
+    farmer_tc_no: 'tcNo',
+    imgurl: '',
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
@@ -80,28 +98,71 @@ export default function Register() {
         formData.append('farmer_address', form.address);
         formData.append('farmer_city', form.city);
         formData.append('farmer_town', form.district);
-        formData.append('famer_neighbourhood', form.neighborhood);
+        formData.append('farmer_neighbourhood', form.neighborhood);
         formData.append('farmer_phone_number', form.phone);
         formData.append('farmer_mail', form.email);
-        formData.append('farmer_activity_status', 'NonActive'); // Varsayılan değer
+        formData.append('farmer_activity_status', 'NonActive');
         formData.append('farm_name', form.farmName);
         formData.append('farmer_tc_no', form.tcNo);
-        // imgurl boş veya null ise eklemeyebiliriz ya da boş string olarak ekleyebiliriz
-        if (form.imgurl) formData.append('imgurl', form.imgurl); // imgurl DTO'da var ama form state'inde yok, eklenmesi gerekebilir
 
         // Sertifika dosyasını ekle (varsa)
-        if (form.farmer_certificates_file) {
-          formData.append('farmer_certificates_file', form.farmer_certificates_file);
+        if (form.farmer_certificates) {
+          formData.append('farmer_certificates', form.farmer_certificates);
         }
 
-        const response = await registerFarmer(formData); // FormData'yı gönder
+        const response = await registerFarmer(formData);
 
         if (response.success) {
           alert('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz.');
           window.location.href = '/login';
         }
       } catch (error: any) {
-        setSubmitError(error.message);
+        if (
+          error.response &&
+          error.response.data &&
+          Array.isArray(error.response.data.message)
+        ) {
+          const backendErrors: { [key: string]: string } = {};
+          const unmappedErrors: string[] = [];
+          
+          error.response.data.message.forEach((msg: string) => {
+            const match = msg.match(/^property (\w+) (.+)$/);
+            if (match) {
+              const backendField = match[1];
+              const message = match[2];
+              const frontendField = backendToFrontendField[backendField];
+              
+              if (frontendField) {
+                // Eğer bu alan için zaten bir hata varsa, virgülle ayırarak ekle
+                if (backendErrors[frontendField]) {
+                  backendErrors[frontendField] += `, ${message}`;
+                } else {
+                  backendErrors[frontendField] = message;
+                }
+              } else {
+                // Mapping bulunamayan hataları topla
+                unmappedErrors.push(msg);
+              }
+            } else {
+              // Property formatında olmayan hataları topla
+              unmappedErrors.push(msg);
+            }
+          });
+
+          setErrors(backendErrors);
+          // Sadece mapping bulunamayan hataları üstte göster
+          setSubmitError(unmappedErrors.length > 0 ? unmappedErrors.join(', ') : '');
+        } else if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          setSubmitError(error.response.data.message);
+        } else if (error.message) {
+          setSubmitError(error.message);
+        } else {
+          setSubmitError('Beklenmedik bir hata oluştu.');
+        }
       } finally {
         setIsLoading(false);
       }

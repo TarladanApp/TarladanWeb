@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginFarmer } from '../services/api';
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -7,6 +8,8 @@ export default function Login() {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -14,28 +17,29 @@ export default function Login() {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
     setIsLoading(true);
     try {
-      // 'identifier' alanını e-posta olarak varsayıyoruz.
-      // Eğer hem e-posta hem telefon ile giriş gerekiyorsa backend'de ayrı bir doğrulama yapılmalı.
       const response = await loginFarmer({
         farmer_mail: form.identifier,
         farmer_password: form.password,
       });
-
-      if (response.success) {
-        alert('Giriş başarılı!');
-        // Başarılı girişte Supabase Auth session'ı otomatik yönetir.
-        // Frontend'de kullanıcı bilgilerini veya session'ı saklamak için Context API vb. kullanılabilir.
+      if (response && response.success) {
+        localStorage.setItem('user', JSON.stringify(response.user));
         navigate('/dashboard');
       } else {
-        setSubmitError(response.message || 'Giriş işlemi başarısız oldu');
+        setSubmitError(response.message || 'Giriş başarısız');
       }
     } catch (error: any) {
-      setSubmitError(error.message || 'Bir hata oluştu.');
+      if (error.response && error.response.data && error.response.data.message) {
+        setSubmitError(error.response.data.message);
+      } else if (error.message) {
+        setSubmitError(error.message);
+      } else {
+        setSubmitError('Giriş yapılırken bir hata oluştu');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -128,11 +132,17 @@ export default function Login() {
             }}
             title={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
           >
-            {showPassword ? '🙈' : '👁️'}
+            {showPassword ? '👁️' : '🙈'}
           </span>
         </div>
+        {submitError && (
+          <div style={{ color: '#dc2626', fontSize: 14, textAlign: 'center', width: '100%' }}>
+            {submitError}
+          </div>
+        )}
         <button
           type="submit"
+          disabled={isLoading}
           style={{
             background: '#40693E',
             color: '#fff',
@@ -141,15 +151,16 @@ export default function Login() {
             padding: '16px 0',
             fontSize: 20,
             fontWeight: 700,
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             marginTop: 10,
             letterSpacing: 1,
             width: '100%',
             boxShadow: '0 4px 16px #1d700133',
             transition: 'all 0.2s',
+            opacity: isLoading ? 0.7 : 1,
           }}
         >
-          GİRİŞ YAP
+          {isLoading ? 'GİRİŞ YAPILIYOR...' : 'GİRİŞ YAP'}
         </button>
       </form>
     </div>

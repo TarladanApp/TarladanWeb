@@ -101,8 +101,7 @@ export default function Dashboard() {
       })));
 
     } catch (error: any) {
-      console.error('Ürünleri getirme hatası:', error.message);
-      alert(`Ürünler getirilirken hata oluştu: ${error.message}`);
+      //alert(`Ürünler getirilirken hata oluştu`);
     }
   };
 
