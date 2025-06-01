@@ -22,17 +22,33 @@ export default function Login() {
     setSubmitError('');
     setIsLoading(true);
     try {
+      console.log('=== Login Submit ===');
+      console.log('Form data:', { farmer_mail: form.identifier, farmer_password: '***' });
+      
       const response = await loginFarmer({
         farmer_mail: form.identifier,
         farmer_password: form.password,
       });
+      
+      console.log('Login response:', response);
+      console.log('Response success:', response?.success);
+      console.log('Response token mevcut:', !!response?.token);
+      console.log('Response token uzunluğu:', response?.token?.length);
+      
       if (response && response.success) {
+        localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
+        
+        console.log('Token localStorage\'a kaydedildi');
+        console.log('Saved token mevcut:', !!localStorage.getItem('token'));
+        
         navigate('/dashboard');
       } else {
+        console.error('Login başarısız:', response);
         setSubmitError(response.message || 'Giriş başarısız');
       }
     } catch (error: any) {
+      console.error('Login error:', error);
       if (error.response && error.response.data && error.response.data.message) {
         setSubmitError(error.response.data.message);
       } else if (error.message) {

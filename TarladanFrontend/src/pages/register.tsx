@@ -352,21 +352,21 @@ const errorStyle: React.CSSProperties = {
   fontSize: 12,
 };
 
-// Mobil uyumlu form stili
-const formStyle = {
-  alignItems: 'center',
-  background: '#f8faf3',
-  padding: 40,
-  borderRadius: 18,
-  width: '85vw',
-  maxWidth: 900,
-  minWidth: 320,
-  boxShadow: '0 6px 32px #00000044',
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 24,
-  transition: 'all 0.3s ease',
-};
+// Mobil uyumlu form stili - kullanılmıyor, inline style kullanılıyor
+// const formStyle = {
+//   alignItems: 'center',
+//   background: '#f8faf3',
+//   padding: 40,
+//   borderRadius: 18,
+//   width: '85vw',
+//   maxWidth: 900,
+//   minWidth: 320,
+//   boxShadow: '0 6px 32px #00000044',
+//   display: 'grid',
+//   gridTemplateColumns: '1fr 1fr',
+//   gap: 24,
+//   transition: 'all 0.3s ease',
+// };
 
 // Media query ile mobilde tek kolona düşür
 const styleSheet = document.createElement('style');
