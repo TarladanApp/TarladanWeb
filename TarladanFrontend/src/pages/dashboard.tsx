@@ -2,13 +2,61 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
+import SiparislerScreen from './SiparislerScreen';
 
 const categories = [
-  { value: '', label: 'Select' },
-  { value: 'vegetable', label: 'Vegetable' },
-  { value: 'fruit', label: 'Fruit' },
-  { value: 'grain', label: 'Grain' },
+  { value: '', label: 'Seçiniz' },
+  { value: 'ananas', label: 'Ananas' },
+  { value: 'armut', label: 'Armut' },
+  { value: 'ayva', label: 'Ayva' },
+  { value: 'bezelye', label: 'Bezelye' },
+  { value: 'biber', label: 'Biber' },
+  { value: 'brokoli', label: 'Brokoli' },
+  { value: 'çilek', label: 'Çilek' },
+  { value: 'dereotu', label: 'Dereotu' },
+  { value: 'domates', label: 'Domates' },
+  { value: 'elma', label: 'Elma' },
+  { value: 'erik', label: 'Erik' },
+  { value: 'fasulye', label: 'Fasulye' },
+  { value: 'greyfurt', label: 'Greyfurt' },
+  { value: 'havuç', label: 'Havuç' },
+  { value: 'hindistancevizi', label: 'Hindistancevizi' },
+  { value: 'hurma', label: 'Hurma' },
+  { value: 'incir', label: 'İncir' },
+  { value: 'ıspanak', label: 'Ispanak' },
+  { value: 'kabak', label: 'Kabak' },
+  { value: 'karpuz', label: 'Karpuz' },
+  { value: 'kavun', label: 'Kavun' },
+  { value: 'karnabahar', label: 'Karnabahar' },
+  { value: 'kereviz', label: 'Kereviz' },
+  { value: 'kiraz', label: 'Kiraz' },
+  { value: 'kivı', label: 'Kivi' },
+  { value: 'kuzu kulağı', label: 'Kuzu Kulağı' },
+  { value: 'lahana', label: 'Lahana' },
+  { value: 'mandalina', label: 'Mandalina' },
+  { value: 'marul', label: 'Marul' },
+  { value: 'maydanoz', label: 'Maydanoz' },
+  { value: 'mısır', label: 'Mısır' },
+  { value: 'muz', label: 'Muz' },
+  { value: 'nar', label: 'Nar' },
+  { value: 'nane', label: 'Nane' },
+  { value: 'nektarin', label: 'Nektarin' },
+  { value: 'pazı', label: 'Pazı' },
+  { value: 'patates', label: 'Patates' },
+  { value: 'patlıcan', label: 'Patlıcan' },
+  { value: 'portakal', label: 'Portakal' },
+  { value: 'roka', label: 'Roka' },
+  { value: 'salatalık', label: 'Salatalık' },
+  { value: 'sarımsak', label: 'Sarımsak' },
+  { value: 'semizotu', label: 'Semizotu' },
+  { value: 'şeftali', label: 'Şeftali' },
+  { value: 'soğan', label: 'Soğan' },
+  { value: 'tere', label: 'Tere' },
+  { value: 'turp', label: 'Turp' },
+  { value: 'üzüm', label: 'Üzüm' },
+  { value: 'vişne', label: 'Vişne' }
 ];
+
 
 const initialProducts: any[] = []; // Başlangıçta boş dizi
 
@@ -171,7 +219,7 @@ export default function Dashboard() {
     newImages: [],
     newCertificates: []
   });
-  const [tab, setTab] = useState<'product' | 'farm'>('product');
+  const [tab, setTab] = useState<'product' | 'farm' | 'orders'>('product');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -181,6 +229,7 @@ export default function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [tempImageSrc, setTempImageSrc] = useState('');
   const [isCropping, setIsCropping] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
     console.log('=== Crop Complete Debug ===');
@@ -827,6 +876,16 @@ export default function Dashboard() {
     }
   }, [navigate, fetchProducts, fetchStoreInfo]);
 
+  // isMobile state'ini güncellemek için resize listener
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Logout fonksiyonu
   const handleLogout = async () => {
     localStorage.removeItem('token');
@@ -883,6 +942,7 @@ export default function Dashboard() {
           </div>
         </div>
         <button style={tab==='product'?menuActive:menuBtn} onClick={()=>setTab('product')}>Panelim</button>
+        <button style={tab==='orders'?menuActive:menuBtn} onClick={()=>setTab('orders')}>🛒 Siparişlerim</button>
         <button style={tab==='farm'?menuActive:menuBtn} onClick={()=>setTab('farm')}>Çiftliğim</button>
         <button style={logoutBtn} onClick={handleLogout}>Çıkış</button>
       </aside>
@@ -907,6 +967,7 @@ export default function Dashboard() {
         {/* Tab menü */}
         <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid #E9DFCE', marginBottom: 32 }} className="dashboard-tabs">
           <button style={tab==='product'?tabActive:tabBtn} onClick={()=>setTab('product')}>Ürün Yönetimi</button>
+          <button style={tab==='orders'?tabActive:tabBtn} onClick={()=>setTab('orders')}>🛒 Siparişlerim</button>
           <button style={tab==='farm'?tabActive:tabBtn} onClick={()=>setTab('farm')}>Mağaza Bilgileriniz</button>
         </div>
         {/* İçerik */}
@@ -1094,6 +1155,8 @@ export default function Dashboard() {
               )}
             </div>
           </section>
+        ) : tab==='orders' ? (
+          <SiparislerScreen isMobile={isMobile} />
         ) : (
           <section style={{ maxWidth: 800 }}>
             <h2 style={{ fontWeight: 700, fontSize: 24, marginBottom: 24 }}>Çiftlik Bilgileri</h2>
@@ -1440,6 +1503,7 @@ const tabActive = {
   ...tabBtn,
   color: '#40693E',
   borderBottom: '3px solid #40693E',
+
 };
 const greenBtn = {
   background: '#1DB954',

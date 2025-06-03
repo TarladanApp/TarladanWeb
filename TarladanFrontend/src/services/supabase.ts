@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // URL ve anahtarı doğrudan tanımlayalım
 const supabaseUrl = 'https://lenywutixaktnyltvbnt.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxlbnl3dXRpeGFrdG55bHR2Ym50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNzQ4NjksImV4cCI6MjA2MDc1MDg2OX0.qTDUh57k52Ov1qf5HsmvEyJREAEXR1DWUfAk8yAqExs';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxlbnl3dXRpeGFrdG55bHR2Ym50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNzQ4NjksImV4cCI6MjA2MDc1MDg2OX0.qTDUh7k2Ov1qf5HsmvEyJREAEXR1DWUfAk8yAqExs';
 
 // URL'yi validate et
 console.log('Supabase URL:', supabaseUrl);
