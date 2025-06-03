@@ -77,6 +77,27 @@ export default function SiparislerScreen({ isMobile }: SiparislerScreenProps) {
               : order
           )
         );
+
+        // Sipariş "hazırlandı" durumuna geçtiğinde gelir raporlarını bilgilendir
+        if (status === 'hazırlandı') {
+          console.log('✅ Sipariş hazırlandı! Gelir aktarımı yapıldı:', orderProductId);
+          
+          // Başarı bildirimi göster
+          alert('✅ Sipariş hazırlandı ve gelir kaydınıza eklendi!');
+          
+          // Custom event ile gelir raporları sayfasına bilgi gönder (güvenli)
+          try {
+            const incomeUpdateEvent = new CustomEvent('incomeUpdated', {
+              detail: {
+                orderProductId,
+                message: 'Yeni gelir kaydı eklendi'
+              }
+            });
+            window.dispatchEvent(incomeUpdateEvent);
+          } catch (eventError) {
+            console.log('Event gönderme hatası (normal):', eventError);
+          }
+        }
       }
     } catch (err: any) {
       console.error('Durum güncelleme hatası:', err);

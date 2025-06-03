@@ -3,6 +3,7 @@ import Cropper from 'react-easy-crop';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import SiparislerScreen from './SiparislerScreen';
+import GelirRaporlariScreen from './GelirRaporlariScreen';
 
 const categories = [
   { value: '', label: 'Seçiniz' },
@@ -219,7 +220,7 @@ export default function Dashboard() {
     newImages: [],
     newCertificates: []
   });
-  const [tab, setTab] = useState<'product' | 'farm' | 'orders'>('product');
+  const [tab, setTab] = useState<'product' | 'farm' | 'orders' | 'income'>('product');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -943,6 +944,7 @@ export default function Dashboard() {
         </div>
         <button style={tab==='product'?menuActive:menuBtn} onClick={()=>setTab('product')}>Panelim</button>
         <button style={tab==='orders'?menuActive:menuBtn} onClick={()=>setTab('orders')}>🛒 Siparişlerim</button>
+        <button style={tab==='income'?menuActive:menuBtn} onClick={()=>setTab('income')}>💰 Gelir Raporları</button>
         <button style={tab==='farm'?menuActive:menuBtn} onClick={()=>setTab('farm')}>Çiftliğim</button>
         <button style={logoutBtn} onClick={handleLogout}>Çıkış</button>
       </aside>
@@ -968,6 +970,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid #E9DFCE', marginBottom: 32 }} className="dashboard-tabs">
           <button style={tab==='product'?tabActive:tabBtn} onClick={()=>setTab('product')}>Ürün Yönetimi</button>
           <button style={tab==='orders'?tabActive:tabBtn} onClick={()=>setTab('orders')}>🛒 Siparişlerim</button>
+          <button style={tab==='income'?tabActive:tabBtn} onClick={()=>setTab('income')}>💰 Gelir Raporları</button>
           <button style={tab==='farm'?tabActive:tabBtn} onClick={()=>setTab('farm')}>Mağaza Bilgileriniz</button>
         </div>
         {/* İçerik */}
@@ -1157,6 +1160,8 @@ export default function Dashboard() {
           </section>
         ) : tab==='orders' ? (
           <SiparislerScreen isMobile={isMobile} />
+        ) : tab==='income' ? (
+          <GelirRaporlariScreen isMobile={isMobile} />
         ) : (
           <section style={{ maxWidth: 800 }}>
             <h2 style={{ fontWeight: 700, fontSize: 24, marginBottom: 24 }}>Çiftlik Bilgileri</h2>
