@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface IncomeRecord {
   id: string;
@@ -40,7 +40,7 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
   const [refreshNotification, setRefreshNotification] = useState<string | null>(null);
 
   // Gelir raporlarını yükle
-  const loadIncomeReports = async () => {
+  const loadIncomeReports = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -127,11 +127,13 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
     loadIncomeReports();
+  }, [loadIncomeReports]);
 
+  useEffect(() => {
     // Sipariş hazırlandığında gelir raporlarını otomatik yenile
     const handleIncomeUpdate = (event: any) => {
       console.log('💰 Gelir güncellemesi algılandı:', event.detail);
@@ -175,7 +177,8 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
     return () => {
       window.removeEventListener('incomeUpdated', handleIncomeUpdate);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // loadIncomeReports dependency'sini kaldırdık çünkü sadece mount'ta çalışması gerekiyor
 
   const handleDateFilter = () => {
     loadIncomeReports();

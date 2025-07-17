@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import SiparislerScreen from './SiparislerScreen';
 import GelirRaporlariScreen from './GelirRaporlariScreen';
+import api, { getStoreActivity, updateStoreActivity } from '../services/api';
 
 const categories = [
   { value: '', label: 'Seçiniz' },
@@ -220,6 +221,18 @@ export default function Dashboard() {
     newImages: [],
     newCertificates: []
   });
+  const [farmerInfo, setFarmerInfo] = useState<{
+    farmer_name: string;
+    farmer_last_name: string;
+  }>({
+    farmer_name: '',
+    farmer_last_name: ''
+  });
+  
+  // Mağaza durumu state'leri
+  const [storeActivity, setStoreActivity] = useState<'active' | 'nonactive'>('active');
+  const [storeActivityLoading, setStoreActivityLoading] = useState(false);
+  
   const [tab, setTab] = useState<'product' | 'farm' | 'orders' | 'income'>('product');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -244,77 +257,113 @@ export default function Dashboard() {
   // Ürünleri backend'den çekme fonksiyonu
   const fetchProducts = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('Token bulunamadı');
-        navigate('/login');
-        return;
-      }
-
-      const API_URL = 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/product`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Ürünler getirilirken bir hata oluştu.');
-      }
-
-      const productsData = await response.json();
-      setProducts(productsData.map((p: any) => ({
-        name: p.product_name,
-        category: categories.find(c => c.value === p.product_katalog_name)?.label || p.product_katalog_name,
-        price: p.farmer_price,
-        stock: p.stock_quantity,
-        id: p.id,
-        image_url: p.image_url,
-      })));
+      console.log('Ürünler getiriliyor...');
+      const response = await api.get('/product'); // Giriş yapan farmer'ın ürünlerini getir
+      console.log('Ürünler yanıtı:', response.data);
+      
+      // Backend'den gelen data'yı frontend formatına çevir
+      const formattedProducts = Array.isArray(response.data) ? response.data.map(product => ({
+        id: product.id,
+        name: product.product_name,
+        category: categories.find(c => c.value === product.product_katalog_name)?.label || product.product_katalog_name,
+        price: product.farmer_price,
+        stock: product.stock_quantity,
+        image_url: product.image_url,
+      })) : [];
+      
+      setProducts(formattedProducts);
     } catch (error: any) {
-      console.error('Ürünler getirilirken hata:', error);
+      console.error('Ürünler getirme hatası:', error);
+      if (error.response?.status === 401) {
+        console.log('401 hatası - Login sayfasına yönlendiriliyor');
+        navigate('/login');
+      }
+      // Hata durumunda boş array set et
+      setProducts([]);
     }
   }, [navigate]);
 
   // Mağaza bilgilerini backend'den çekme fonksiyonu
   const fetchStoreInfo = useCallback(async () => {
     try {
-    const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('Token bulunamadı');
-        return;
-      }
-
-      const API_URL = 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/farmer/store/info`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const storeData = await response.json();
-        setFarmInfo(prev => ({
-          ...prev,
-          farmer_biografi: storeData.farmer_biografi || '',
-          farm_name: storeData.farm_name || '',
-          images: storeData.images || [],
-          certificates: storeData.certificates || []
-        }));
-      }
+      console.log('Mağaza bilgileri getiriliyor...');
+      const response = await api.get('/farmer/store/info');
+      console.log('Mağaza bilgileri yanıtı:', response.data);
+      
+      // Backend'den gelen data'yı güvenli şekilde state'e ata
+      setFarmInfo(prevState => ({
+        ...prevState,
+        farmer_biografi: response.data.farmer_biografi || '',
+        farm_name: response.data.farm_name || '',
+        images: response.data.images || [],
+        certificates: response.data.certificates || [],
+        // newImages ve newCertificates'i koru
+        newImages: prevState.newImages,
+        newCertificates: prevState.newCertificates
+      }));
     } catch (error: any) {
-      console.error('Mağaza bilgileri getirilirken hata:', error);
+      console.error('Mağaza bilgileri getirme hatası:', error);
+      if (error.response?.status === 401) {
+        console.log('401 hatası - Login sayfasına yönlendiriliyor');
+        navigate('/login');
+      }
     }
-  }, []);
+  }, [navigate]);
+
+  // Farmer bilgilerini backend'den çekme fonksiyonu
+  const fetchFarmerInfo = useCallback(async () => {
+    try {
+      console.log('Farmer bilgileri getiriliyor...');
+      const response = await api.get('/farmer/profile');
+      console.log('Farmer bilgileri yanıtı:', response.data);
+      setFarmerInfo(response.data);
+    } catch (error: any) {
+      console.error('Farmer bilgileri getirme hatası:', error);
+      if (error.response?.status === 401) {
+        console.log('401 hatası - Login sayfasına yönlendiriliyor');
+        navigate('/login');
+      }
+    }
+  }, [navigate]);
+
+  // Mağaza durumunu getiren fonksiyon
+  const fetchStoreActivity = useCallback(async () => {
+    try {
+      console.log('Mağaza durumu getiriliyor...');
+      const response = await getStoreActivity();
+      console.log('Mağaza durumu yanıtı:', response);
+      setStoreActivity(response.farmer_store_activity || 'active');
+    } catch (error: any) {
+      console.error('Mağaza durumu getirme hatası:', error);
+      if (error.response?.status === 401) {
+        console.log('401 hatası - Login sayfasına yönlendiriliyor');
+        navigate('/login');
+      }
+    }
+  }, [navigate]);
+
+  // Mağaza durumunu güncelleyen fonksiyon
+  const handleStoreActivityToggle = async () => {
+    if (storeActivityLoading) return;
+    
+    setStoreActivityLoading(true);
+    const newActivity = storeActivity === 'active' ? 'nonactive' : 'active';
+    
+    try {
+      console.log('Mağaza durumu güncelleniyor:', newActivity);
+      const response = await updateStoreActivity(newActivity);
+      console.log('Mağaza durumu güncelleme yanıtı:', response);
+      setStoreActivity(newActivity);
+      
+      // Toast bildirimi gösterebiliriz
+      console.log(`Mağaza durumu ${newActivity === 'active' ? 'açık' : 'kapalı'} olarak güncellendi`);
+    } catch (error: any) {
+      console.error('Mağaza durumu güncelleme hatası:', error);
+      // Hata durumunda eski state'i koru
+    } finally {
+      setStoreActivityLoading(false);
+    }
+  };
 
   // Ürün ekleme
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -338,17 +387,9 @@ export default function Dashboard() {
         console.log('File content length (ArrayBuffer):', e.target?.result ? (e.target.result as ArrayBuffer).byteLength : 0);
       };
       reader.readAsArrayBuffer(product.image);
-      }
+    }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const API_URL = 'http://localhost:3001';
-
       // FormData oluştur
       const formData = new FormData();
       formData.append('product_name', product.name);
@@ -377,40 +418,26 @@ export default function Dashboard() {
         }
       }
 
-      console.log('Sending request to:', `${API_URL}/product`);
-      const response = await fetch(`${API_URL}/product`, {
-        method: 'POST',
+      console.log('Sending product create request...');
+      const response = await api.post('/product', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
         },
-        body: formData,
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Ürün eklenirken bir hata oluştu.');
-      }
-
-      const newProduct = await response.json();
-      console.log('API Response:', newProduct);
+      console.log('API Response:', response.data);
       
-      setProducts([...products, {
-        name: newProduct.product_name,
-        category: categories.find(c => c.value === newProduct.product_katalog_name)?.label || newProduct.product_katalog_name,
-        price: newProduct.farmer_price,
-        stock: newProduct.stock_quantity,
-        id: newProduct.id,
-        image_url: newProduct.image_url,
-      }]);
+      // Backend'den gelen data'yı frontend formatına çevir
+      const newProduct = {
+        id: response.data.id,
+        name: response.data.product_name,
+        category: categories.find(c => c.value === response.data.product_katalog_name)?.label || response.data.product_katalog_name,
+        price: response.data.farmer_price,
+        stock: response.data.stock_quantity,
+        image_url: response.data.image_url,
+      };
+      
+      setProducts(prevProducts => [...(prevProducts || []), newProduct]);
 
       // Formu temizle
       setProduct({
@@ -422,9 +449,11 @@ export default function Dashboard() {
         image: '',
         imagePreview: '',
       });
+      
+      alert('Ürün başarıyla eklendi!');
     } catch (error: any) {
       console.error('Ürün eklenirken hata:', error);
-      alert(error.message);
+      alert(error.response?.data?.message || error.message || 'Ürün eklenirken bir hata oluştu.');
     }
   };
 
@@ -511,7 +540,7 @@ export default function Dashboard() {
 
       setFarmInfo(prev => ({
         ...prev,
-        newImages: [...prev.newImages, ...newFiles]
+        newImages: [...(prev.newImages || []), ...newFiles]
       }));
     }
   };
@@ -537,7 +566,7 @@ export default function Dashboard() {
 
       setFarmInfo(prev => ({
         ...prev,
-        newCertificates: [...prev.newCertificates, ...newFiles]
+        newCertificates: [...(prev.newCertificates || []), ...newFiles]
       }));
     }
   };
@@ -545,76 +574,58 @@ export default function Dashboard() {
   // Mağaza bilgilerini kaydet
   const handleSaveStoreInfo = async () => {
     try {
-      const token = localStorage.getItem('token');
       console.log('=== handleSaveStoreInfo Debug ===');
-      console.log('Token mevcut:', !!token);
       
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const API_URL = 'http://localhost:3001';
-
       // 1. Biyografiyi güncelle
       if (farmInfo.farmer_biografi.trim()) {
         console.log('Biyografi güncelleyecek:', farmInfo.farmer_biografi);
-        const bioResponse = await fetch(`${API_URL}/farmer/store/biography`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ farmer_biografi: farmInfo.farmer_biografi }),
-        });
-        console.log('Biyografi response status:', bioResponse.status);
-        if (!bioResponse.ok) {
-          const errorText = await bioResponse.text();
-          console.error('Biyografi error:', errorText);
+        try {
+          await api.put('/farmer/store/biography', { 
+            farmer_biografi: farmInfo.farmer_biografi 
+          });
+          console.log('Biyografi başarıyla güncellendi');
+        } catch (error) {
+          console.error('Biyografi güncelleme hatası:', error);
         }
       }
 
       // 2. Yeni resimleri yükle
-      if (farmInfo.newImages.length > 0) {
+      if (farmInfo.newImages && farmInfo.newImages.length > 0) {
         console.log('Yeni resimler yükleyecek:', farmInfo.newImages.length);
         const imageFormData = new FormData();
         farmInfo.newImages.forEach(image => {
           imageFormData.append('images', image);
         });
 
-        const imageResponse = await fetch(`${API_URL}/farmer/store/images`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: imageFormData,
-        });
-        console.log('Resim response status:', imageResponse.status);
-        if (!imageResponse.ok) {
-          const errorText = await imageResponse.text();
-          console.error('Resim error:', errorText);
+        try {
+          await api.post('/farmer/store/images', imageFormData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          console.log('Resimler başarıyla yüklendi');
+        } catch (error) {
+          console.error('Resim yükleme hatası:', error);
         }
       }
 
       // 3. Yeni sertifikaları yükle
-      if (farmInfo.newCertificates.length > 0) {
+      if (farmInfo.newCertificates && farmInfo.newCertificates.length > 0) {
         console.log('Yeni sertifikalar yükleyecek:', farmInfo.newCertificates.length);
         const certFormData = new FormData();
         farmInfo.newCertificates.forEach(cert => {
           certFormData.append('certificates', cert);
         });
 
-        const certResponse = await fetch(`${API_URL}/farmer/store/certificates`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: certFormData,
-        });
-        console.log('Sertifika response status:', certResponse.status);
-        if (!certResponse.ok) {
-          const errorText = await certResponse.text();
-          console.error('Sertifika error:', errorText);
+        try {
+          await api.post('/farmer/store/certificates', certFormData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          console.log('Sertifikalar başarıyla yüklendi');
+        } catch (error) {
+          console.error('Sertifika yükleme hatası:', error);
         }
       }
 
@@ -636,25 +647,9 @@ export default function Dashboard() {
   // Resim sil
   const handleDeleteImage = async (imageId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const API_URL = 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/farmer/store/images/${imageId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        fetchStoreInfo(); // Verileri yeniden çek
-      } else {
-        alert('Resim silinirken hata oluştu.');
-      }
+      await api.delete(`/farmer/store/images/${imageId}`);
+      fetchStoreInfo(); // Verileri yeniden çek
+      alert('Resim başarıyla silindi!');
     } catch (error: any) {
       console.error('Resim silinirken hata:', error);
       alert('Resim silinirken hata oluştu.');
@@ -664,25 +659,9 @@ export default function Dashboard() {
   // Sertifika sil
   const handleDeleteCertificate = async (certificateId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const API_URL = 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/farmer/store/certificates/${certificateId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        fetchStoreInfo(); // Verileri yeniden çek
-      } else {
-        alert('Sertifika silinirken hata oluştu.');
-      }
+      await api.delete(`/farmer/store/certificates/${certificateId}`);
+      fetchStoreInfo(); // Verileri yeniden çek
+      alert('Sertifika başarıyla silindi!');
     } catch (error: any) {
       console.error('Sertifika silinirken hata:', error);
       alert('Sertifika silinirken hata oluştu.');
@@ -691,14 +670,18 @@ export default function Dashboard() {
 
   // Yeni resmi listeden çıkar
   const removeNewImage = (index: number) => {
-    const updatedImages = farmInfo.newImages.filter((_, i) => i !== index);
-    setFarmInfo(prev => ({ ...prev, newImages: updatedImages }));
+    if (farmInfo.newImages && farmInfo.newImages.length > index) {
+      const updatedImages = farmInfo.newImages.filter((_, i) => i !== index);
+      setFarmInfo(prev => ({ ...prev, newImages: updatedImages }));
+    }
   };
 
   // Yeni sertifikayı listeden çıkar
   const removeNewCertificate = (index: number) => {
-    const updatedCerts = farmInfo.newCertificates.filter((_, i) => i !== index);
-    setFarmInfo(prev => ({ ...prev, newCertificates: updatedCerts }));
+    if (farmInfo.newCertificates && farmInfo.newCertificates.length > index) {
+      const updatedCerts = farmInfo.newCertificates.filter((_, i) => i !== index);
+      setFarmInfo(prev => ({ ...prev, newCertificates: updatedCerts }));
+    }
   };
 
   // Ürün güncelleme
@@ -707,14 +690,7 @@ export default function Dashboard() {
     if (editIndex === null) return;
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       const productId = products[editIndex].id;
-      const API_URL = 'http://localhost:3001';
 
       const formData = new FormData();
       formData.append('product_name', product.name);
@@ -725,35 +701,24 @@ export default function Dashboard() {
         formData.append('file', product.image);
       }
 
-      const response = await fetch(`${API_URL}/product/${productId}`, {
-        method: 'PATCH',
+      const response = await api.patch(`/product/${productId}`, formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
         },
-        body: formData,
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Ürün güncellenirken bir hata oluştu.');
-      }
-
-      const updatedProduct = await response.json();
-      const updatedProducts = [...products];
-      updatedProducts[editIndex] = {
-        name: updatedProduct.product_name,
-        category: categories.find(c => c.value === updatedProduct.product_katalog_name)?.label || updatedProduct.product_katalog_name,
-        price: updatedProduct.farmer_price,
-        stock: updatedProduct.stock_quantity,
-        id: updatedProduct.id,
-        image_url: updatedProduct.image_url,
+      // Backend'den gelen data'yı frontend formatına çevir
+      const updatedProductData = {
+        id: response.data.id,
+        name: response.data.product_name,
+        category: categories.find(c => c.value === response.data.product_katalog_name)?.label || response.data.product_katalog_name,
+        price: response.data.farmer_price,
+        stock: response.data.stock_quantity,
+        image_url: response.data.image_url,
       };
+
+      const updatedProducts = [...(products || [])];
+      updatedProducts[editIndex] = updatedProductData;
 
       setProducts(updatedProducts);
       setEditMode(false);
@@ -767,14 +732,18 @@ export default function Dashboard() {
         image: '',
         imagePreview: '',
       });
+      
+      alert('Ürün başarıyla güncellendi!');
     } catch (error: any) {
       console.error('Ürün güncellenirken hata:', error);
-      alert(error.message);
+      alert(error.response?.data?.message || error.message || 'Ürün güncellenirken bir hata oluştu.');
     }
   };
 
   // Düzenleme butonuna tıklandığında
   const handleEdit = (index: number) => {
+    if (!products || !products[index]) return;
+    
     const p = products[index];
     setProduct({
       name: p.name,
@@ -792,38 +761,17 @@ export default function Dashboard() {
   // Ürün silme
   const handleDelete = async (idx: number) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       const productId = products[idx].id;
-      const API_URL = 'http://localhost:3001';
 
-      const response = await fetch(`${API_URL}/product/${productId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      await api.delete(`/product/${productId}`);
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Ürün silinirken bir hata oluştu.');
-      }
-
-      const updatedProducts = products.filter((_, index) => index !== idx);
+      const updatedProducts = (products || []).filter((_, index) => index !== idx);
       setProducts(updatedProducts);
+      
+      alert('Ürün başarıyla silindi!');
     } catch (error: any) {
       console.error('Ürün silinirken hata:', error);
-      alert(error.message);
+      alert(error.response?.data?.message || error.message || 'Ürün silinirken bir hata oluştu.');
     }
   };
 
@@ -862,20 +810,68 @@ export default function Dashboard() {
 
   // Component yüklendiğinde ürünleri ve mağaza bilgilerini çek
   useEffect(() => {
-    const token = localStorage.getItem('token');
     console.log('=== Dashboard useEffect ===');
+    const token = localStorage.getItem('token');
     console.log('Token mevcut:', !!token);
     console.log('Token uzunluğu:', token?.length);
     console.log('Token ilk 50 karakter:', token?.substring(0, 50));
-    
+
     if (token) {
       fetchProducts();
       fetchStoreInfo();
+      fetchFarmerInfo();
+      fetchStoreActivity(); // Mağaza durumunu yükle
     } else {
-      console.log('Token yok, login sayfasına yönlendiriliyor');
+      console.log('Token bulunamadı - Login sayfasına yönlendiriliyor');
       navigate('/login');
     }
-  }, [navigate, fetchProducts, fetchStoreInfo]);
+  }, [navigate, fetchProducts, fetchStoreInfo, fetchFarmerInfo, fetchStoreActivity]);
+
+  // Supabase realtime subscription - mağaza durumu değişikliklerini dinle
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const farmer = JSON.parse(localStorage.getItem('farmer') || '{}');
+    
+    if (!token || !farmer.farmer_id) return;
+
+    console.log('=== Supabase Realtime Subscription ===');
+    console.log('Farmer ID:', farmer.farmer_id);
+
+    // farmer tablosundaki değişiklikleri dinle
+    const subscription = supabase
+      .channel('farmer-store-activity')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'farmer',
+          filter: `farmer_id=eq.${farmer.farmer_id}`
+        },
+        (payload) => {
+          console.log('=== Realtime Store Activity Update ===');
+          console.log('Payload:', payload);
+          
+          if (payload.new && payload.new.farmer_store_activity) {
+            const newActivity = payload.new.farmer_store_activity;
+            console.log('Yeni mağaza durumu:', newActivity);
+            setStoreActivity(newActivity);
+            
+            // Bildirim göster
+            console.log(`Mağaza durumu realtime olarak ${newActivity === 'active' ? 'açık' : 'kapalı'} olarak güncellendi`);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
+
+    // Cleanup function
+    return () => {
+      console.log('Subscription temizleniyor...');
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // isMobile state'ini güncellemek için resize listener
   useEffect(() => {
@@ -939,7 +935,12 @@ export default function Dashboard() {
           <img src={require('../assets/brand-logo.png')} alt="logo" style={{ width: 40, borderRadius: '50%' }} />
           <div>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Hoş Geldin</div>
-            <div style={{ fontSize: 13, color: '#A18249' }}>Hasan Gürbüz</div>
+            <div style={{ fontSize: 13, color: '#A18249' }}>
+              {farmerInfo.farmer_name && farmerInfo.farmer_last_name 
+                ? `${farmerInfo.farmer_name} ${farmerInfo.farmer_last_name}`
+                : 'Çiftçi'
+              }
+            </div>
           </div>
         </div>
         <button style={tab==='product'?menuActive:menuBtn} onClick={()=>setTab('product')}>Panelim</button>
@@ -964,6 +965,87 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
             <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>Satış Panelim</h1>
             <div style={{ color: '#A18249' }}>Ürünlerinizi ve Çiftliğinizi Yönetin</div>
+          </div>
+          
+          {/* Mağaza Durumu Toggle Butonu */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div className="store-toggle-container" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ 
+                fontSize: 16, 
+                fontWeight: 600, 
+                color: storeActivity === 'active' ? '#40693E' : '#999' 
+              }}>
+                Mağaza: {storeActivity === 'active' ? 'Açık' : 'Kapalı'}
+              </span>
+              
+              {/* Havalı Toggle Switch */}
+              <button
+                className="store-toggle"
+                onClick={handleStoreActivityToggle}
+                disabled={storeActivityLoading}
+                style={{
+                  position: 'relative',
+                  width: 80, // 64'ten 80'e çıkardım
+                  height: 32,
+                  borderRadius: 16,
+                  border: 'none',
+                  cursor: storeActivityLoading ? 'not-allowed' : 'pointer',
+                  background: storeActivity === 'active' ? '#40693E' : '#ccc',
+                  transition: 'all 0.3s ease',
+                  outline: 'none',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  opacity: storeActivityLoading ? 0.7 : 1
+                }}
+                title={`Mağazayı ${storeActivity === 'active' ? 'Kapat' : 'Aç'}`}
+              >
+                {/* Toggle Circle */}
+                <div style={{
+                  position: 'absolute',
+                  top: 2,
+                  left: storeActivity === 'active' ? 50 : 2, // 34'ten 50'ye çıkardım
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  display: 'flex',
+                  alignItems: 'center', // Left'ten center'a düzelttim
+                  justifyContent: 'center',
+                  fontSize: 12
+                }}>
+                  {storeActivityLoading ? (
+                    <div style={{
+                      width: 12,
+                      height: 12,
+                      border: '2px solid #ccc',
+                      borderTop: '2px solid #40693E',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                  ) : storeActivity === 'active' ? (
+                    <span style={{ color: '#40693E', fontWeight: 'bold' }}>✓</span>
+                  ) : (
+                    <span style={{ color: '#999', fontWeight: 'bold' }}>✕</span>
+                  )}
+                </div>
+                
+                {/* Status Text on Toggle */}
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: storeActivity === 'active' ? 8 : 32, // Pozisyonları yeniden ayarladım
+                  transform: 'translateY(-50%)',
+                  fontSize: 8, // Font size'ı daha da küçülttüm
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  transition: 'all 0.3s ease',
+                  whiteSpace: 'nowrap' // Text'in taşmasını engelle
+                }}>
+                  {storeActivity === 'active' ? 'Açık' : 'Kapalı'}
+                </div>
+              </button>
+            </div>
           </div>
         </nav>
         {/* Tab menü */}
@@ -1053,7 +1135,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-              {products.map((product, idx) => (
+              {products && products.length > 0 ? products.map((product, idx) => (
                     <tr key={product.id} style={{ borderBottom: '1px solid #E9DFCE' }}>
                       <td style={thTd}>
                         {product.image_url ? (
@@ -1077,13 +1159,19 @@ export default function Dashboard() {
                         <button style={deleteBtn} onClick={() => handleDelete(idx)}>Sil</button>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={6} style={{ ...thTd, textAlign: 'center', color: '#999' }}>
+                        Henüz ürün eklenmemiş.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
 
               {/* Mobile Cards */}
               <div className="mobile-cards" style={{ display: 'none' }}>
-                {products.map((product, idx) => (
+                {products && products.length > 0 ? products.map((product, idx) => (
                   <div key={product.id} style={{ 
                     background: '#fff', 
                     border: '1px solid #E9DFCE', 
@@ -1148,14 +1236,19 @@ export default function Dashboard() {
                       </button>
                   </div>
                 </div>
-              ))}
-              </div>
-
-              {products.length === 0 && (
-                <div style={{ textAlign: 'center', padding: 32, color: '#999' }}>
+              )) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: 32, 
+                  color: '#999',
+                  background: '#fff',
+                  border: '1px solid #E9DFCE',
+                  borderRadius: 12
+                }}>
                   Henüz ürün eklenmemiş.
                 </div>
               )}
+              </div>
             </div>
           </section>
         ) : tab==='orders' ? (
@@ -1183,7 +1276,7 @@ export default function Dashboard() {
               <label style={{ display: 'block', marginBottom: 16, fontWeight: 600 }}>Çiftlik Fotoğrafları</label>
               
               {/* Mevcut Resimler */}
-              {farmInfo.images.length > 0 && (
+              {farmInfo.images && farmInfo.images.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <h4 style={{ marginBottom: 12, color: '#666' }}>Mevcut Resimler:</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
@@ -1219,7 +1312,7 @@ export default function Dashboard() {
               )}
 
               {/* Yeni Resimler */}
-              {farmInfo.newImages.length > 0 && (
+              {farmInfo.newImages && farmInfo.newImages.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <h4 style={{ marginBottom: 12, color: '#666' }}>Yüklenecek Resimler:</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
@@ -1285,7 +1378,7 @@ export default function Dashboard() {
               <label style={{ display: 'block', marginBottom: 16, fontWeight: 600 }}>Sertifikalarım</label>
               
               {/* Mevcut Sertifikalar */}
-              {farmInfo.certificates.length > 0 && (
+              {farmInfo.certificates && farmInfo.certificates.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <h4 style={{ marginBottom: 12, color: '#666' }}>Mevcut Sertifikalar:</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1349,7 +1442,7 @@ export default function Dashboard() {
               )}
 
               {/* Yeni Sertifikalar */}
-              {farmInfo.newCertificates.length > 0 && (
+              {farmInfo.newCertificates && farmInfo.newCertificates.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <h4 style={{ marginBottom: 12, color: '#666' }}>Yüklenecek Sertifikalar:</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1545,6 +1638,23 @@ const deleteBtn = {
 // Mobil ve tablet uyumlu stiller için media query
 const styleSheet = document.createElement('style');
 styleSheet.innerHTML = `
+  /* Spinner animasyonu */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Toggle butonu hover efekti */
+  .store-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+  }
+
+  /* Toggle butonu active efekti */
+  .store-toggle:active {
+    transform: scale(0.95);
+  }
+
   /* Büyük ekranlarda yan menü */
   .dashboard-sidebar {
     display: flex;
@@ -1610,6 +1720,22 @@ styleSheet.innerHTML = `
       font-size: 28px;
     }
 
+    /* Mobilde mağaza toggle butonunu daha küçük yap */
+    .dashboard-top-nav-large > div:last-child {
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dashboard-top-nav-large .store-toggle-container {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dashboard-top-nav-large .store-toggle-container span {
+      font-size: 14px;
+    }
+
     .dashboard-tabs {
       flex-direction: column;
       gap: 16px;
@@ -1665,6 +1791,11 @@ styleSheet.innerHTML = `
 
     .dashboard-top-nav-large {
       padding: 4px 0;
+    }
+
+    /* Telefonda toggle butonunu daha da küçük yap */
+    .dashboard-top-nav-large .store-toggle-container span {
+      font-size: 13px;
     }
 
     .dashboard-tabs {

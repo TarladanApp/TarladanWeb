@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TarladanWeb - Hesap Doğrulama</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .welcome-text {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 25px;
+        }
+        .verification-box {
+            background-color: #f0fdf4;
+            border: 2px solid #22c55e;
+            border-radius: 8px;
+            padding: 25px;
+            text-align: center;
+            margin: 25px 0;
+        }
+        .verify-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            text-decoration: none;
+            padding: 15px 35px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 15px 0;
+            transition: transform 0.2s;
+        }
+        .verify-button:hover {
+            transform: translateY(-2px);
+        }
+        .features {
+            margin: 30px 0;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 10px 0;
+        }
+        .feature-icon {
+            background-color: #22c55e;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        .footer {
+            background-color: #f9fafb;
+            padding: 25px 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+        .footer p {
+            margin: 5px 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .security-note {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .security-note strong {
+            color: #d97706;
+        }
+        @media (max-width: 640px) {
+            .container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+            .content {
+                padding: 30px 20px;
+            }
+            .header {
+                padding: 25px 20px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .feature-item {
+                flex-direction: column;
+                text-align: center;
+                margin: 20px 0;
+            }
+            .feature-icon {
+                margin: 0 0 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🌱 TarladanWeb</h1>
+            <p>Çiftçiden Sofraya Doğrudan Bağlantı</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="welcome-text">
+                <strong>Merhaba!</strong><br>
+                TarladanWeb ailesine hoş geldiniz! Hesabınızı doğrulamak için sadece bir adım kaldı.
+            </div>
+
+            <div class="verification-box">
+                <h3 style="color: #16a34a; margin-top: 0;">📧 Email Doğrulama</h3>
+                <p>Aşağıdaki butona tıklayarak hesabınızı aktif hale getirebilirsiniz:</p>
+                
+                <a href="#" class="verify-button" onclick="alert('Demo: Gerçek sistemde bu link Supabase tarafından sağlanır')">
+                    ✅ Hesabımı Doğrula
+                </a>
+                
+                <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
+                    Buton çalışmıyorsa şu linki kopyalayın:<br>
+                    <span style="word-break: break-all; background: #f3f4f6; padding: 5px; border-radius: 4px;">
+                        https://tarladanweb.com/auth/verify?token=EXAMPLE_TOKEN
+                    </span>
+                </p>
+            </div>
+
+            <div class="features">
+                <h3 style="color: #374151; margin-bottom: 20px;">🚀 Size Sunduğumuz İmkanlar:</h3>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">🏪</div>
+                    <div>
+                        <strong>Dijital Mağaza</strong><br>
+                        <span style="color: #6b7280;">Kendi online mağazanızı kurun ve yönetin</span>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">📦</div>
+                    <div>
+                        <strong>Ürün Yönetimi</strong><br>
+                        <span style="color: #6b7280;">Ürünlerinizi kolayca ekleyin, düzenleyin</span>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">📊</div>
+                    <div>
+                        <strong>Gelir Analizi</strong><br>
+                        <span style="color: #6b7280;">Satışlarınızı takip edin, raporlar alın</span>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">⚡</div>
+                    <div>
+                        <strong>Gerçek Zamanlı</strong><br>
+                        <span style="color: #6b7280;">Siparişleri anında takip edin</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="security-note">
+                <strong>🔒 Güvenlik Notu:</strong> Bu doğrulama linki 24 saat geçerlidir. Eğer bu e-postayı siz talep etmediyseniz, güvenle göz ardı edebilirsiniz.
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>TarladanWeb Ekibi</strong></p>
+            <p>Çiftçiler için modern e-ticaret çözümleri</p>
+            <p style="margin-top: 15px;">
+                Sorularınız için: <a href="mailto:destek@tarladanweb.com" style="color: #22c55e;">destek@tarladanweb.com</a>
+            </p>
+            <p style="margin-top: 10px; font-size: 12px;">
+                📱 <a href="http://localhost:3000" style="color: #22c55e;">TarladanWeb Platform</a> | 
+                🌐 <a href="mailto:info@tarladanweb.com" style="color: #22c55e;">Destek</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Demo Script -->
+    <script>
+        // Demo için hover effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const button = document.querySelector('.verify-button');
+            if (button) {
+                button.addEventListener('mouseover', function() {
+                    this.style.boxShadow = '0 8px 25px rgba(34, 197, 94, 0.3)';
+                });
+                button.addEventListener('mouseout', function() {
+                    this.style.boxShadow = 'none';
+                });
+            }
+            
+            // Feature icons hover effect
+            document.querySelectorAll('.feature-icon').forEach(icon => {
+                icon.addEventListener('mouseover', function() {
+                    this.style.transform = 'scale(1.1)';
+                    this.style.transition = 'transform 0.2s';
+                });
+                icon.addEventListener('mouseout', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

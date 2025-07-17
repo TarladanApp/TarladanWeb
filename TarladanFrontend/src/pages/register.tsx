@@ -300,7 +300,7 @@ export default function Register() {
           {errors.tcNo && <span style={errorStyle}>{errors.tcNo}</span>}
         </div>
         <div style={{ gridColumn: '1/3' }}>
-          <label>Sertifikalar (opsiyonel)</label>
+          <label>Organik Tarım Sertifikası(opsiyonel)</label>
           <input name="farmer_certificates" type="file" onChange={handleChange} style={inputStyle} />
         </div>    
         <button

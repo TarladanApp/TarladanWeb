@@ -13,6 +13,7 @@
     "baseUrl": "./src",
     "allowJs": true,
     "noImplicitAny": false,
+    "types": ["jest", "node"],
     "lib": [
       "dom",
       "dom.iterable",
@@ -27,11 +28,11 @@
     "noEmit": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx"
   ],
   "exclude": [
-    "node_modules",
-    "**/*.test.ts",
-    "**/*.spec.ts"
+    "node_modules"
   ]
 }

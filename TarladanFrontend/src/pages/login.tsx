@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginFarmer } from '../services/api';
+import api from '../services/api';
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -32,43 +33,54 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitError('');
     setIsLoading(true);
+    setSubmitError('');
+    console.log('=== Login Form Submit ===');
+    console.log('Form data:', { ...form, farmer_password: '***' });
+
     try {
-      console.log('=== Login Submit ===');
-      console.log('Form data:', { farmer_mail: form.identifier, farmer_password: '***' });
-      
-      const response = await loginFarmer({
-        farmer_mail: form.identifier,
-        farmer_password: form.password,
-      });
-      
-      console.log('Login response:', response);
-      console.log('Response success:', response?.success);
-      console.log('Response token mevcut:', !!response?.token);
-      console.log('Response token uzunluğu:', response?.token?.length);
-      
-      if (response && response.success) {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        
-        console.log('Token localStorage\'a kaydedildi');
-        console.log('Saved token mevcut:', !!localStorage.getItem('token'));
-        
+      const data = await loginFarmer(form);
+      console.log('Login response:', data);
+
+      if (data.token) {
+        // Token'ı kaydet
+        localStorage.setItem('token', data.token);
+        console.log('Token kaydedildi:', data.token.substring(0, 50) + '...');
+
+        // Token süresini kaydet (24 saat)
+        const expiryDate = new Date();
+        expiryDate.setHours(expiryDate.getHours() + 24);
+        localStorage.setItem('tokenExpiry', expiryDate.toISOString());
+        console.log('Token süresi kaydedildi:', expiryDate.toLocaleString());
+
+        // Kullanıcı bilgilerini kaydet
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+          console.log('Kullanıcı bilgileri kaydedildi');
+        }
+
+        // Farmer bilgilerini kaydet
+        if (data.farmer) {
+          localStorage.setItem('farmer', JSON.stringify(data.farmer));
+          console.log('Farmer bilgileri kaydedildi');
+        }
+
+        // API instance'ını güncelle
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        console.log('API headers güncellendi');
+
+        // Kısa bir gecikme ekle
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        console.log('Dashboard\'a yönlendiriliyor...');
         navigate('/dashboard');
       } else {
-        console.error('Login başarısız:', response);
-        setSubmitError(response.message || 'Giriş başarısız');
+        console.error('Token bulunamadı');
+        setSubmitError('Giriş başarısız: Token alınamadı');
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        setSubmitError(error.response.data.message);
-      } else if (error.message) {
-        setSubmitError(error.message);
-      } else {
-        setSubmitError('Giriş yapılırken bir hata oluştu');
-      }
+      setSubmitError(error.response?.data?.message || 'Giriş başarısız');
     } finally {
       setIsLoading(false);
     }
