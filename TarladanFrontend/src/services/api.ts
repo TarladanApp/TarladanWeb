@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -13,7 +13,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   console.log('API Request interceptor - Token:', token ? 'Token mevcut' : 'Token yok');
-  
+
   if (token) {
     try {
       // Token'ın geçerliliğini kontrol et
@@ -22,14 +22,14 @@ api.interceptors.request.use((config) => {
         const payload = JSON.parse(atob(tokenParts[1]));
         const expirationTime = payload.exp * 1000;
         const currentTime = Date.now();
-        
+
         if (currentTime >= expirationTime) {
           console.log('Token süresi dolmuş');
           clearAuthData();
           return Promise.reject('Token süresi dolmuş');
         }
       }
-      
+
       // Token'ı header'a ekle
       config.headers['Authorization'] = `Bearer ${token}`;
       console.log('Token header\'a eklendi:', config.headers['Authorization'].substring(0, 50) + '...');
@@ -39,7 +39,7 @@ api.interceptors.request.use((config) => {
       return Promise.reject('Geçersiz token');
     }
   }
-  
+
   console.log('API Request:', {
     method: config.method?.toUpperCase(),
     url: config.url,
@@ -68,7 +68,7 @@ api.interceptors.response.use(
       data: error.response?.data,
       headers: error.config?.headers
     });
-    
+
     if (error.response?.status === 401) {
       console.log('401 Unauthorized hatası - Login sayfasına yönlendiriliyor');
       clearAuthData();

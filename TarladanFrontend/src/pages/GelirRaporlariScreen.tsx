@@ -48,13 +48,13 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
       // localStorage'daki tüm verileri debug için kontrol et
       console.log('=== localStorage Debug ===');
       console.log('localStorage keys:', Object.keys(localStorage));
-      
+
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key) {
           const value = localStorage.getItem(key);
           console.log(`${key}:`, value);
-          
+
           // JSON formatında mı kontrol et
           if (value && (value.startsWith('{') || value.startsWith('['))) {
             try {
@@ -76,20 +76,20 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
 
       const user = JSON.parse(userData);
       console.log('Giriş yapmış kullanıcı:', user);
-      
+
       // Farmer ID'yi user objesinden al - farklı olasılıkları dene
       let farmerId = user.farmer_id || user.id || user.farmerId;
-      
+
       // Nested objeler kontrol et
       if (!farmerId && user.farmer) {
         farmerId = user.farmer.farmer_id || user.farmer.id;
       }
-      
+
       // Eğer user objesi auth user ise
       if (!farmerId && user.user_metadata) {
         farmerId = user.user_metadata.farmer_id;
       }
-      
+
       if (!farmerId) {
         console.error('Farmer ID bulunamadı. User objesi:', user);
         console.error('User objesi keys:', Object.keys(user));
@@ -99,12 +99,13 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
       console.log('Giriş yapmış farmer ID:', farmerId);
 
       // Test endpoint kullanıyoruz
-      let url = `http://localhost:3001/farmer/income-reports/test/${farmerId}`;
-      
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      let url = `${baseUrl}/farmer/income-reports/test/${farmerId}`;
+
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
@@ -137,21 +138,21 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
     // Sipariş hazırlandığında gelir raporlarını otomatik yenile
     const handleIncomeUpdate = (event: any) => {
       console.log('💰 Gelir güncellemesi algılandı:', event.detail);
-      
+
       // Bildirim göster
       setRefreshNotification('🔄 Yeni gelir kaydı eklendi, raporlar yenileniyor...');
-      
+
       // Kısa bir gecikmeyle yenile (backend işleminin tamamlanması için)
       setTimeout(() => {
         console.log('🔄 Gelir raporları otomatik yenileniyor...');
-        
+
         // Güvenli yenileme - hata olursa sadece bildirimi göster
         loadIncomeReports()
           .then(() => {
             // Başarı bildirimi göster
             setTimeout(() => {
               setRefreshNotification('✅ Gelir raporları güncellendi!');
-              
+
               // 3 saniye sonra bildirimi gizle
               setTimeout(() => {
                 setRefreshNotification(null);
@@ -161,7 +162,7 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
           .catch((error) => {
             console.error('Otomatik yenileme hatası:', error);
             setRefreshNotification('⚠️ Gelir raporları yenilenemedi. Sayfayı manuel yenileyin.');
-            
+
             // 5 saniye sonra bildirimi gizle
             setTimeout(() => {
               setRefreshNotification(null);
@@ -204,10 +205,10 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '400px',
         fontSize: '16px',
         color: '#666'
@@ -219,14 +220,14 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
 
   if (error) {
     return (
-      <div style={{ 
-        textAlign: 'center', 
+      <div style={{
+        textAlign: 'center',
         padding: '32px',
         color: '#e74c3c'
       }}>
         <h3>Hata Oluştu</h3>
         <p>{error}</p>
-        <button 
+        <button
           onClick={loadIncomeReports}
           style={{
             padding: '8px 16px',
@@ -246,9 +247,9 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
 
   return (
     <div style={{ maxWidth: isMobile ? '100%' : '1200px', margin: '0 auto', padding: isMobile ? '16px' : '24px' }}>
-      <h2 style={{ 
-        fontWeight: 700, 
-        fontSize: isMobile ? '20px' : '24px', 
+      <h2 style={{
+        fontWeight: 700,
+        fontSize: isMobile ? '20px' : '24px',
         marginBottom: '24px',
         color: '#2c3e50'
       }}>
@@ -273,7 +274,7 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
       )}
 
       {/* Tarih Filtresi */}
-      <div style={{ 
+      <div style={{
         backgroundColor: '#f8f9fa',
         padding: '16px',
         borderRadius: '8px',
@@ -336,8 +337,8 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
 
       {/* Özet Kartları */}
       {incomeData && (
-        <div style={{ 
-          display: 'grid', 
+        <div style={{
+          display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '16px',
           marginBottom: '24px'
@@ -379,7 +380,7 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
       )}
 
       {/* Tab Menüsü */}
-      <div style={{ 
+      <div style={{
         borderBottom: '2px solid #eee',
         marginBottom: '24px',
         display: 'flex'
@@ -420,8 +421,8 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
           {selectedTab === 'all' ? (
             <div>
               {incomeData.income_records.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
+                <div style={{
+                  textAlign: 'center',
                   padding: '32px',
                   color: '#999',
                   backgroundColor: '#f8f9fa',
@@ -430,8 +431,8 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
                   Henüz gelir kaydı bulunamadı.
                 </div>
               ) : (
-                <div style={{ 
-                  display: 'grid', 
+                <div style={{
+                  display: 'grid',
                   gap: '16px'
                 }}>
                   {incomeData.income_records.map((record) => (
@@ -445,8 +446,8 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
                         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                       }}
                     >
-                      <div style={{ 
-                        display: 'flex', 
+                      <div style={{
+                        display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: isMobile ? 'flex-start' : 'center',
                         flexDirection: isMobile ? 'column' : 'row',
@@ -466,15 +467,15 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
                             <strong>Tarih:</strong> {formatDate(record.created_at)}
                           </p>
                         </div>
-                        <div style={{ 
+                        <div style={{
                           textAlign: isMobile ? 'left' : 'right',
                           minWidth: isMobile ? 'auto' : '120px'
                         }}>
-                          <p style={{ 
-                            margin: 0, 
-                            fontSize: '18px', 
-                            fontWeight: 700, 
-                            color: '#27ae60' 
+                          <p style={{
+                            margin: 0,
+                            fontSize: '18px',
+                            fontWeight: 700,
+                            color: '#27ae60'
                           }}>
                             {formatCurrency(record.product_income)}
                           </p>
@@ -488,8 +489,8 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
           ) : (
             <div>
               {incomeData.product_summary.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
+                <div style={{
+                  textAlign: 'center',
                   padding: '32px',
                   color: '#999',
                   backgroundColor: '#f8f9fa',
@@ -498,8 +499,8 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
                   Ürün özeti bulunamadı.
                 </div>
               ) : (
-                <div style={{ 
-                  display: 'grid', 
+                <div style={{
+                  display: 'grid',
                   gap: '16px'
                 }}>
                   {incomeData.product_summary.map((summary, index) => (
@@ -513,8 +514,8 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
                         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                       }}
                     >
-                      <div style={{ 
-                        display: 'flex', 
+                      <div style={{
+                        display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: isMobile ? 'flex-start' : 'center',
                         flexDirection: isMobile ? 'column' : 'row',
@@ -531,15 +532,15 @@ const GelirRaporlariScreen: React.FC<GelirRaporlariScreenProps> = ({ isMobile })
                             <strong>Sipariş Sayısı:</strong> {summary.order_count}
                           </p>
                         </div>
-                        <div style={{ 
+                        <div style={{
                           textAlign: isMobile ? 'left' : 'right',
                           minWidth: isMobile ? 'auto' : '120px'
                         }}>
-                          <p style={{ 
-                            margin: 0, 
-                            fontSize: '18px', 
-                            fontWeight: 700, 
-                            color: '#27ae60' 
+                          <p style={{
+                            margin: 0,
+                            fontSize: '18px',
+                            fontWeight: 700,
+                            color: '#27ae60'
                           }}>
                             {formatCurrency(summary.total_income)}
                           </p>
