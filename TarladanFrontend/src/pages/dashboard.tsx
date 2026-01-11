@@ -65,35 +65,28 @@ const initialProducts: any[] = []; // Başlangıçta boş dizi
 // Base64'ü File objesine çeviren yardımcı fonksiyon
 function base64ToFile(base64String: string, fileName: string): File {
   try {
-    console.log('=== Base64 to File Debug ===');
-    console.log('Base64 string length:', base64String.length);
-    console.log('Base64 string start:', base64String.substring(0, 50));
-    
+
+
     // Data URL formatını kontrol et (data:image/jpeg;base64,...)
     const arr = base64String.split(',');
     if (arr.length !== 2) {
       throw new Error('Invalid base64 format');
     }
-    
+
     const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
-    
-    console.log('MIME type:', mime);
-    console.log('Binary string length:', n);
-    
+
+
+
     while (n--) {
       u8arr[n] = bstr.charCodeAt(n);
     }
-    
+
     const file = new File([u8arr], fileName, { type: mime });
-    console.log('Created file:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
-    
+
+
     return file;
   } catch (error) {
     console.error('Base64 to File error:', error);
@@ -105,39 +98,28 @@ function getCroppedImg(imageSrc: string, crop: any, zoom: number, aspect: number
   return new Promise<string>((resolve, reject) => {
     const image = new window.Image();
     image.crossOrigin = 'anonymous';
-    
+
     image.onload = () => {
-      console.log('=== Image Load Debug ===');
-      console.log('Original image dimensions:', {
-        width: image.width,
-        height: image.height,
-        naturalWidth: image.naturalWidth,
-        naturalHeight: image.naturalHeight
-      });
-      console.log('Crop parameters:', crop);
-      console.log('Zoom:', zoom);
-      
+
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
+
       if (!ctx) {
         reject(new Error('Canvas context not available'));
         return;
       }
-      
+
       // Canvas boyutunu ayarla
       canvas.width = size;
       canvas.height = size;
-      
-      // Eğer crop bilgisi yoksa, merkezi kare al
+
       if (!crop || typeof crop.x === 'undefined' || typeof crop.width === 'undefined') {
-        console.log('No valid crop data, using center crop');
         const minDimension = Math.min(image.naturalWidth, image.naturalHeight);
+
         const startX = (image.naturalWidth - minDimension) / 2;
         const startY = (image.naturalHeight - minDimension) / 2;
-        
-        console.log('Center crop:', { startX, startY, minDimension });
-        
+
         // Resmi çiz - merkezi kare
         ctx.drawImage(
           image,
@@ -146,16 +128,13 @@ function getCroppedImg(imageSrc: string, crop: any, zoom: number, aspect: number
         );
       } else {
         // Crop koordinatlarını kullan
-        console.log('Using crop coordinates:', crop);
-        
+
         // react-easy-crop'tan gelen koordinatları kullan
         const sx = crop.x;
         const sy = crop.y;
         const sw = crop.width;
         const sh = crop.height;
-        
-        console.log('Final crop coordinates:', { sx, sy, sw, sh });
-        
+
         // Resmi çiz
         ctx.drawImage(
           image,
@@ -163,32 +142,28 @@ function getCroppedImg(imageSrc: string, crop: any, zoom: number, aspect: number
           0, 0, size, size
         );
       }
-      
+
       // Base64'e dönüştür
       try {
         const base64 = canvas.toDataURL('image/jpeg', 0.9);
-        console.log('=== Canvas to Base64 Debug ===');
-        console.log('Canvas size:', canvas.width, 'x', canvas.height);
-        console.log('Base64 length:', base64.length);
-        console.log('Base64 start:', base64.substring(0, 100));
-        
+
         if (base64.length < 100) {
           reject(new Error('Generated base64 is too short'));
           return;
         }
-        
+
         resolve(base64);
       } catch (error) {
         console.error('Canvas to base64 error:', error);
         reject(error);
       }
     };
-    
+
     image.onerror = (error) => {
       console.error('Image load error:', error);
       reject(new Error('Failed to load image'));
     };
-    
+
     image.src = imageSrc;
   });
 }
@@ -206,8 +181,8 @@ export default function Dashboard() {
     imagePreview: '',
   });
   const [products, setProducts] = useState(initialProducts);
-  const [farmInfo, setFarmInfo] = useState<{ 
-    farmer_biografi: string; 
+  const [farmInfo, setFarmInfo] = useState<{
+    farmer_biografi: string;
     farm_name: string;
     images: any[];
     certificates: any[];
@@ -228,11 +203,11 @@ export default function Dashboard() {
     farmer_name: '',
     farmer_last_name: ''
   });
-  
+
   // Mağaza durumu state'leri
   const [storeActivity, setStoreActivity] = useState<'active' | 'nonactive'>('active');
   const [storeActivityLoading, setStoreActivityLoading] = useState(false);
-  
+
   const [tab, setTab] = useState<'product' | 'farm' | 'orders' | 'income'>('product');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -246,9 +221,6 @@ export default function Dashboard() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
-    console.log('=== Crop Complete Debug ===');
-    console.log('croppedArea:', croppedArea);
-    console.log('croppedAreaPixels:', croppedAreaPixels);
     setCroppedAreaPixels(croppedAreaPixels);
     // Crop state'ini de güncelle
     setCrop({ x: croppedAreaPixels.x, y: croppedAreaPixels.y });
@@ -260,7 +232,7 @@ export default function Dashboard() {
       console.log('Ürünler getiriliyor...');
       const response = await api.get('/product'); // Giriş yapan farmer'ın ürünlerini getir
       console.log('Ürünler yanıtı:', response.data);
-      
+
       // Backend'den gelen data'yı frontend formatına çevir
       const formattedProducts = Array.isArray(response.data) ? response.data.map(product => ({
         id: product.id,
@@ -270,12 +242,12 @@ export default function Dashboard() {
         stock: product.stock_quantity,
         image_url: product.image_url,
       })) : [];
-      
+
       setProducts(formattedProducts);
     } catch (error: any) {
       console.error('Ürünler getirme hatası:', error);
       if (error.response?.status === 401) {
-        console.log('401 hatası - Login sayfasına yönlendiriliyor');
+
         navigate('/login');
       }
       // Hata durumunda boş array set et
@@ -286,10 +258,10 @@ export default function Dashboard() {
   // Mağaza bilgilerini backend'den çekme fonksiyonu
   const fetchStoreInfo = useCallback(async () => {
     try {
-      console.log('Mağaza bilgileri getiriliyor...');
+
       const response = await api.get('/farmer/store/info');
-      console.log('Mağaza bilgileri yanıtı:', response.data);
-      
+
+
       // Backend'den gelen data'yı güvenli şekilde state'e ata
       setFarmInfo(prevState => ({
         ...prevState,
@@ -304,7 +276,7 @@ export default function Dashboard() {
     } catch (error: any) {
       console.error('Mağaza bilgileri getirme hatası:', error);
       if (error.response?.status === 401) {
-        console.log('401 hatası - Login sayfasına yönlendiriliyor');
+
         navigate('/login');
       }
     }
@@ -313,9 +285,9 @@ export default function Dashboard() {
   // Farmer bilgilerini backend'den çekme fonksiyonu
   const fetchFarmerInfo = useCallback(async () => {
     try {
-      console.log('Farmer bilgileri getiriliyor...');
+
       const response = await api.get('/farmer/profile');
-      console.log('Farmer bilgileri yanıtı:', response.data);
+
       setFarmerInfo(response.data);
     } catch (error: any) {
       console.error('Farmer bilgileri getirme hatası:', error);
@@ -329,9 +301,9 @@ export default function Dashboard() {
   // Mağaza durumunu getiren fonksiyon
   const fetchStoreActivity = useCallback(async () => {
     try {
-      console.log('Mağaza durumu getiriliyor...');
+
       const response = await getStoreActivity();
-      console.log('Mağaza durumu yanıtı:', response);
+
       setStoreActivity(response.farmer_store_activity || 'active');
     } catch (error: any) {
       console.error('Mağaza durumu getirme hatası:', error);
@@ -345,18 +317,17 @@ export default function Dashboard() {
   // Mağaza durumunu güncelleyen fonksiyon
   const handleStoreActivityToggle = async () => {
     if (storeActivityLoading) return;
-    
+
     setStoreActivityLoading(true);
     const newActivity = storeActivity === 'active' ? 'nonactive' : 'active';
-    
+
     try {
-      console.log('Mağaza durumu güncelleniyor:', newActivity);
+
       const response = await updateStoreActivity(newActivity);
-      console.log('Mağaza durumu güncelleme yanıtı:', response);
+
       setStoreActivity(newActivity);
-      
+
       // Toast bildirimi gösterebiliriz
-      console.log(`Mağaza durumu ${newActivity === 'active' ? 'açık' : 'kapalı'} olarak güncellendi`);
     } catch (error: any) {
       console.error('Mağaza durumu güncelleme hatası:', error);
       // Hata durumunda eski state'i koru
@@ -369,22 +340,13 @@ export default function Dashboard() {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log('=== Frontend Product Add Debug ===');
-    console.log('Product data:', product);
-    console.log('Product image type:', typeof product.image);
-    console.log('Product image instanceof File:', product.image instanceof File);
+
     if (product.image instanceof File) {
-      console.log('File details:', {
-        name: product.image.name,
-        size: product.image.size,
-        type: product.image.type,
-        lastModified: product.image.lastModified
-      });
-      
+
+
       // File içeriğini okuyup kontrol et
       const reader = new FileReader();
       reader.onload = (e) => {
-        console.log('File content length (ArrayBuffer):', e.target?.result ? (e.target.result as ArrayBuffer).byteLength : 0);
       };
       reader.readAsArrayBuffer(product.image);
     }
@@ -396,37 +358,22 @@ export default function Dashboard() {
       formData.append('product_katalog_name', product.category);
       formData.append('farmer_price', product.price);
       formData.append('stock_quantity', product.stock);
-      
+
       if (product.image) {
-        console.log('Adding file to FormData...');
-        console.log('File being added:', product.image);
         formData.append('file', product.image);
-        
-        // FormData içeriğini detaylı kontrol et
-        console.log('=== FormData Debug ===');
-        for (let [key, value] of formData.entries()) {
-          if (value instanceof File) {
-            console.log(`FormData ${key}:`, {
-              name: value.name,
-              size: value.size,
-              type: value.type,
-              lastModified: value.lastModified
-            });
-          } else {
-            console.log(`FormData ${key}:`, value);
-          }
-        }
+
+
       }
 
-      console.log('Sending product create request...');
+
       const response = await api.post('/product', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      console.log('API Response:', response.data);
-      
+
+
       // Backend'den gelen data'yı frontend formatına çevir
       const newProduct = {
         id: response.data.id,
@@ -436,7 +383,7 @@ export default function Dashboard() {
         stock: response.data.stock_quantity,
         image_url: response.data.image_url,
       };
-      
+
       setProducts(prevProducts => [...(prevProducts || []), newProduct]);
 
       // Formu temizle
@@ -449,7 +396,7 @@ export default function Dashboard() {
         image: '',
         imagePreview: '',
       });
-      
+
       alert('Ürün başarıyla eklendi!');
     } catch (error: any) {
       console.error('Ürün eklenirken hata:', error);
@@ -473,12 +420,7 @@ export default function Dashboard() {
         return;
       }
 
-      console.log('=== Original File Debug ===');
-      console.log('Original file:', {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
+
 
       // Crop için resmi URL'e çevir
       const reader = new FileReader();
@@ -496,20 +438,11 @@ export default function Dashboard() {
   const handleCropSave = async () => {
     if (tempImageSrc && crop && zoom !== undefined) {
       try {
-        console.log('=== Crop Save Debug ===');
-        console.log('Crop settings:', { crop, zoom });
-        
         const croppedImageBase64 = await getCroppedImg(tempImageSrc, crop, zoom, 1, 82);
-        console.log('Cropped image base64 length:', croppedImageBase64.length);
-        
+
         // Base64'ü File objesine çevir
         const croppedFile = base64ToFile(croppedImageBase64, `product-image-${Date.now()}.jpg`);
-        console.log('Cropped file created:', {
-          name: croppedFile.name,
-          size: croppedFile.size,
-          type: croppedFile.type
-        });
-        
+
         setProduct({ ...product, image: croppedFile });
         setIsCropping(false);
         setTempImageSrc('');
@@ -574,24 +507,20 @@ export default function Dashboard() {
   // Mağaza bilgilerini kaydet
   const handleSaveStoreInfo = async () => {
     try {
-      console.log('=== handleSaveStoreInfo Debug ===');
-      
-      // 1. Biyografiyi güncelle
+
+
       if (farmInfo.farmer_biografi.trim()) {
-        console.log('Biyografi güncelleyecek:', farmInfo.farmer_biografi);
         try {
-          await api.put('/farmer/store/biography', { 
-            farmer_biografi: farmInfo.farmer_biografi 
+          await api.put('/farmer/store/biography', {
+            farmer_biografi: farmInfo.farmer_biografi
           });
-          console.log('Biyografi başarıyla güncellendi');
+
         } catch (error) {
           console.error('Biyografi güncelleme hatası:', error);
         }
       }
 
-      // 2. Yeni resimleri yükle
       if (farmInfo.newImages && farmInfo.newImages.length > 0) {
-        console.log('Yeni resimler yükleyecek:', farmInfo.newImages.length);
         const imageFormData = new FormData();
         farmInfo.newImages.forEach(image => {
           imageFormData.append('images', image);
@@ -603,15 +532,13 @@ export default function Dashboard() {
               'Content-Type': 'multipart/form-data',
             },
           });
-          console.log('Resimler başarıyla yüklendi');
+
         } catch (error) {
           console.error('Resim yükleme hatası:', error);
         }
       }
 
-      // 3. Yeni sertifikaları yükle
       if (farmInfo.newCertificates && farmInfo.newCertificates.length > 0) {
-        console.log('Yeni sertifikalar yükleyecek:', farmInfo.newCertificates.length);
         const certFormData = new FormData();
         farmInfo.newCertificates.forEach(cert => {
           certFormData.append('certificates', cert);
@@ -623,14 +550,14 @@ export default function Dashboard() {
               'Content-Type': 'multipart/form-data',
             },
           });
-          console.log('Sertifikalar başarıyla yüklendi');
+
         } catch (error) {
           console.error('Sertifika yükleme hatası:', error);
         }
       }
 
       alert('Mağaza bilgileri başarıyla kaydedildi!');
-      
+
       // Yeni dosyaları temizle ve verileri yeniden çek
       setFarmInfo(prev => ({
         ...prev,
@@ -732,7 +659,7 @@ export default function Dashboard() {
         image: '',
         imagePreview: '',
       });
-      
+
       alert('Ürün başarıyla güncellendi!');
     } catch (error: any) {
       console.error('Ürün güncellenirken hata:', error);
@@ -743,7 +670,7 @@ export default function Dashboard() {
   // Düzenleme butonuna tıklandığında
   const handleEdit = (index: number) => {
     if (!products || !products[index]) return;
-    
+
     const p = products[index];
     setProduct({
       name: p.name,
@@ -767,7 +694,7 @@ export default function Dashboard() {
 
       const updatedProducts = (products || []).filter((_, index) => index !== idx);
       setProducts(updatedProducts);
-      
+
       alert('Ürün başarıyla silindi!');
     } catch (error: any) {
       console.error('Ürün silinirken hata:', error);
@@ -794,12 +721,12 @@ export default function Dashboard() {
     const handleClickOutside = (event: MouseEvent) => {
       const sidebar = document.querySelector('.dashboard-sidebar');
       const menuButton = document.querySelector('.mobile-menu-button');
-      
-      if (isMobileMenuOpen && 
-          sidebar && 
-          !sidebar.contains(event.target as Node) && 
-          menuButton && 
-          !menuButton.contains(event.target as Node)) {
+
+      if (isMobileMenuOpen &&
+        sidebar &&
+        !sidebar.contains(event.target as Node) &&
+        menuButton &&
+        !menuButton.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
       }
     };
@@ -808,13 +735,8 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMobileMenuOpen]);
 
-  // Component yüklendiğinde ürünleri ve mağaza bilgilerini çek
   useEffect(() => {
-    console.log('=== Dashboard useEffect ===');
     const token = localStorage.getItem('token');
-    console.log('Token mevcut:', !!token);
-    console.log('Token uzunluğu:', token?.length);
-    console.log('Token ilk 50 karakter:', token?.substring(0, 50));
 
     if (token) {
       fetchProducts();
@@ -822,7 +744,7 @@ export default function Dashboard() {
       fetchFarmerInfo();
       fetchStoreActivity(); // Mağaza durumunu yükle
     } else {
-      console.log('Token bulunamadı - Login sayfasına yönlendiriliyor');
+
       navigate('/login');
     }
   }, [navigate, fetchProducts, fetchStoreInfo, fetchFarmerInfo, fetchStoreActivity]);
@@ -831,11 +753,8 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const farmer = JSON.parse(localStorage.getItem('farmer') || '{}');
-    
-    if (!token || !farmer.farmer_id) return;
 
-    console.log('=== Supabase Realtime Subscription ===');
-    console.log('Farmer ID:', farmer.farmer_id);
+    if (!token || !farmer.farmer_id) return;
 
     // farmer tablosundaki değişiklikleri dinle
     const subscription = supabase
@@ -849,26 +768,20 @@ export default function Dashboard() {
           filter: `farmer_id=eq.${farmer.farmer_id}`
         },
         (payload) => {
-          console.log('=== Realtime Store Activity Update ===');
-          console.log('Payload:', payload);
-          
+
           if (payload.new && payload.new.farmer_store_activity) {
             const newActivity = payload.new.farmer_store_activity;
-            console.log('Yeni mağaza durumu:', newActivity);
             setStoreActivity(newActivity);
-            
+
             // Bildirim göster
-            console.log(`Mağaza durumu realtime olarak ${newActivity === 'active' ? 'açık' : 'kapalı'} olarak güncellendi`);
           }
         }
       )
       .subscribe((status) => {
-        console.log('Subscription status:', status);
       });
 
     // Cleanup function
     return () => {
-      console.log('Subscription temizleniyor...');
       subscription.unsubscribe();
     };
   }, []);
@@ -897,7 +810,7 @@ export default function Dashboard() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#FAF8F3' }} className={`dashboard-container ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
       {/* Hamburger Menü Butonu - Sadece mobilde görünür */}
-      <button 
+      <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         style={{
           display: 'none',
@@ -920,12 +833,12 @@ export default function Dashboard() {
       </button>
 
       {/* Sol Menü / Mobil Menü */}
-      <aside style={{ 
-        width: 220, 
-        background: '#F5F2EA', 
-        padding: 24, 
-        display: 'flex', 
-        flexDirection: 'column', 
+      <aside style={{
+        width: 220,
+        background: '#F5F2EA',
+        padding: 24,
+        display: 'flex',
+        flexDirection: 'column',
         gap: 16,
         transition: 'all 0.3s ease',
         position: 'relative',
@@ -936,27 +849,27 @@ export default function Dashboard() {
           <div>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Hoş Geldin</div>
             <div style={{ fontSize: 13, color: '#A18249' }}>
-              {farmerInfo.farmer_name && farmerInfo.farmer_last_name 
+              {farmerInfo.farmer_name && farmerInfo.farmer_last_name
                 ? `${farmerInfo.farmer_name} ${farmerInfo.farmer_last_name}`
                 : 'Çiftçi'
               }
             </div>
           </div>
         </div>
-        <button style={tab==='product'?menuActive:menuBtn} onClick={()=>setTab('product')}>Panelim</button>
-        <button style={tab==='orders'?menuActive:menuBtn} onClick={()=>setTab('orders')}>🛒 Siparişlerim</button>
-        <button style={tab==='income'?menuActive:menuBtn} onClick={()=>setTab('income')}>💰 Gelir Raporları</button>
-        <button style={tab==='farm'?menuActive:menuBtn} onClick={()=>setTab('farm')}>Çiftliğim</button>
+        <button style={tab === 'product' ? menuActive : menuBtn} onClick={() => setTab('product')}>Panelim</button>
+        <button style={tab === 'orders' ? menuActive : menuBtn} onClick={() => setTab('orders')}>🛒 Siparişlerim</button>
+        <button style={tab === 'income' ? menuActive : menuBtn} onClick={() => setTab('income')}>💰 Gelir Raporları</button>
+        <button style={tab === 'farm' ? menuActive : menuBtn} onClick={() => setTab('farm')}>Çiftliğim</button>
         <button style={logoutBtn} onClick={handleLogout}>Çıkış</button>
       </aside>
 
       {/* Ana İçerik */}
       <main style={{ flex: 1, padding: '32px 48px' }} className="dashboard-main-content">
         {/* Üst Menü */}
-        <nav style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
+        <nav style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           width: '100%',
           marginBottom: 24,
           padding: '16px 0',
@@ -966,18 +879,18 @@ export default function Dashboard() {
             <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>Satış Panelim</h1>
             <div style={{ color: '#A18249' }}>Ürünlerinizi ve Çiftliğinizi Yönetin</div>
           </div>
-          
+
           {/* Mağaza Durumu Toggle Butonu */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <div className="store-toggle-container" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ 
-                fontSize: 16, 
-                fontWeight: 600, 
-                color: storeActivity === 'active' ? '#40693E' : '#999' 
+              <span style={{
+                fontSize: 16,
+                fontWeight: 600,
+                color: storeActivity === 'active' ? '#40693E' : '#999'
               }}>
                 Mağaza: {storeActivity === 'active' ? 'Açık' : 'Kapalı'}
               </span>
-              
+
               {/* Havalı Toggle Switch */}
               <button
                 className="store-toggle"
@@ -1029,7 +942,7 @@ export default function Dashboard() {
                     <span style={{ color: '#999', fontWeight: 'bold' }}>✕</span>
                   )}
                 </div>
-                
+
                 {/* Status Text on Toggle */}
                 <div style={{
                   position: 'absolute',
@@ -1050,30 +963,30 @@ export default function Dashboard() {
         </nav>
         {/* Tab menü */}
         <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid #E9DFCE', marginBottom: 32 }} className="dashboard-tabs">
-          <button style={tab==='product'?tabActive:tabBtn} onClick={()=>setTab('product')}>Ürün Yönetimi</button>
-          <button style={tab==='orders'?tabActive:tabBtn} onClick={()=>setTab('orders')}>🛒 Siparişlerim</button>
-          <button style={tab==='income'?tabActive:tabBtn} onClick={()=>setTab('income')}>💰 Gelir Raporları</button>
-          <button style={tab==='farm'?tabActive:tabBtn} onClick={()=>setTab('farm')}>Mağaza Bilgileriniz</button>
+          <button style={tab === 'product' ? tabActive : tabBtn} onClick={() => setTab('product')}>Ürün Yönetimi</button>
+          <button style={tab === 'orders' ? tabActive : tabBtn} onClick={() => setTab('orders')}>🛒 Siparişlerim</button>
+          <button style={tab === 'income' ? tabActive : tabBtn} onClick={() => setTab('income')}>💰 Gelir Raporları</button>
+          <button style={tab === 'farm' ? tabActive : tabBtn} onClick={() => setTab('farm')}>Mağaza Bilgileriniz</button>
         </div>
         {/* İçerik */}
-        {tab==='product' ? (
+        {tab === 'product' ? (
           <section>
             {/* Ürün Ekleme Formu */}
             <form onSubmit={editMode ? handleUpdateProduct : handleAddProduct} style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 600 }}>
               <label>Ürün İsmi
-                <input className="form-input" style={inputStyle} value={product.name} onChange={e=>setProduct({...product, name:e.target.value})} required />
+                <input className="form-input" style={inputStyle} value={product.name} onChange={e => setProduct({ ...product, name: e.target.value })} required />
               </label>
               <label>Ürünün Kategorisi
-                <select className="form-input" style={inputStyle} value={product.category} onChange={e=>setProduct({...product, category:e.target.value})} required>
-                  {categories.map(c=>(<option key={c.value} value={c.value}>{c.label}</option>))}
+                <select className="form-input" style={inputStyle} value={product.category} onChange={e => setProduct({ ...product, category: e.target.value })} required>
+                  {categories.map(c => (<option key={c.value} value={c.value}>{c.label}</option>))}
                 </select>
               </label>
               <div style={{ display: 'flex', gap: 16 }}>
                 <label style={{ flex: 1 }}>Fiyatı
-                  <input className="form-input" style={inputStyle} type="number" min="0" step="0.01" value={product.price} onChange={e=>setProduct({...product, price:e.target.value})} required />
+                  <input className="form-input" style={inputStyle} type="number" min="0" step="0.01" value={product.price} onChange={e => setProduct({ ...product, price: e.target.value })} required />
                 </label>
                 <label style={{ flex: 1 }}>Stok Miktarı
-                  <input className="form-input" style={inputStyle} type="number" min="0" value={product.stock} onChange={e=>setProduct({...product, stock:e.target.value})} required />
+                  <input className="form-input" style={inputStyle} type="number" min="0" value={product.stock} onChange={e => setProduct({ ...product, stock: e.target.value })} required />
                 </label>
               </div>
               <label>Ürünün Resmi
@@ -1082,10 +995,10 @@ export default function Dashboard() {
               {product.image && product.image instanceof File && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>Önizleme (82x82):</p>
-                  <img 
-                    src={URL.createObjectURL(product.image)} 
-                    alt="preview" 
-                    style={{ width: 82, height: 82, objectFit: 'cover', borderRadius: 12, border: '2px solid #E9DFCE' }} 
+                  <img
+                    src={URL.createObjectURL(product.image)}
+                    alt="preview"
+                    style={{ width: 82, height: 82, objectFit: 'cover', borderRadius: 12, border: '2px solid #E9DFCE' }}
                   />
                 </div>
               )}
@@ -1093,10 +1006,10 @@ export default function Dashboard() {
             </form>
             {/* Crop Modal */}
             {isCropping && (
-              <div style={{ position: 'fixed', top:0, left:0, width:'100vw', height:'100vh', background:'#0008', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <div style={{ background:'#fff', padding:32, borderRadius:16, boxShadow:'0 2px 16px #0003', position:'relative' }}>
+              <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: '#fff', padding: 32, borderRadius: 16, boxShadow: '0 2px 16px #0003', position: 'relative' }}>
                   <h3>Fotoğrafı Kırp (82x82)</h3>
-                  <div style={{ position:'relative', width:300, height:300, background:'#eee', marginBottom:16 }}>
+                  <div style={{ position: 'relative', width: 300, height: 300, background: '#eee', marginBottom: 16 }}>
                     <Cropper
                       image={tempImageSrc}
                       crop={crop}
@@ -1111,8 +1024,8 @@ export default function Dashboard() {
                       maxZoom={3}
                     />
                   </div>
-                  <div style={{ display:'flex', gap:16, justifyContent:'flex-end' }}>
-                    <button onClick={()=>{setIsCropping(false); setTempImageSrc('');}} style={{...greenBtn, background:'#ccc', color:'#222'}}>İptal</button>
+                  <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+                    <button onClick={() => { setIsCropping(false); setTempImageSrc(''); }} style={{ ...greenBtn, background: '#ccc', color: '#222' }}>İptal</button>
                     <button onClick={handleCropSave} style={greenBtn}>Kırp ve Yükle</button>
                   </div>
                 </div>
@@ -1121,7 +1034,7 @@ export default function Dashboard() {
             {/* Ürün Listesi */}
             <div style={{ marginTop: 32 }}>
               <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>Mevcut Ürünlerim</h2>
-              
+
               {/* Desktop Table */}
               <table style={{ width: '100%', border: '1px solid #E9DFCE', borderRadius: 8, overflow: 'hidden', background: '#fff' }} className="desktop-table">
                 <thead>
@@ -1135,14 +1048,14 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-              {products && products.length > 0 ? products.map((product, idx) => (
+                  {products && products.length > 0 ? products.map((product, idx) => (
                     <tr key={product.id} style={{ borderBottom: '1px solid #E9DFCE' }}>
                       <td style={thTd}>
                         {product.image_url ? (
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                            style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }} 
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }}
                           />
                         ) : (
                           <div style={{ width: 60, height: 60, background: '#f0f0f0', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#999' }}>
@@ -1172,31 +1085,31 @@ export default function Dashboard() {
               {/* Mobile Cards */}
               <div className="mobile-cards" style={{ display: 'none' }}>
                 {products && products.length > 0 ? products.map((product, idx) => (
-                  <div key={product.id} style={{ 
-                    background: '#fff', 
-                    border: '1px solid #E9DFCE', 
-                    borderRadius: 12, 
-                    padding: 16, 
+                  <div key={product.id} style={{
+                    background: '#fff',
+                    border: '1px solid #E9DFCE',
+                    borderRadius: 12,
+                    padding: 16,
                     marginBottom: 16,
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                   }}>
                     <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
                       {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name} 
-                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} 
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}
                         />
                       ) : (
-                        <div style={{ 
-                          width: 80, 
-                          height: 80, 
-                          background: '#f0f0f0', 
-                          borderRadius: 8, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          fontSize: 12, 
+                        <div style={{
+                          width: 80,
+                          height: 80,
+                          background: '#f0f0f0',
+                          borderRadius: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 12,
                           color: '#999',
                           flexShrink: 0
                         }}>
@@ -1223,50 +1136,50 @@ export default function Dashboard() {
                     </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <button
-                        style={{ ...editBtn, minWidth: 80 }} 
+                        style={{ ...editBtn, minWidth: 80 }}
                         onClick={() => handleEdit(idx)}
                       >
                         Düzenle
                       </button>
                       <button
-                        style={{ ...deleteBtn, minWidth: 60 }} 
+                        style={{ ...deleteBtn, minWidth: 60 }}
                         onClick={() => handleDelete(idx)}
                       >
                         Sil
                       </button>
+                    </div>
                   </div>
-                </div>
-              )) : (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: 32, 
-                  color: '#999',
-                  background: '#fff',
-                  border: '1px solid #E9DFCE',
-                  borderRadius: 12
-                }}>
-                  Henüz ürün eklenmemiş.
-                </div>
-              )}
+                )) : (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: 32,
+                    color: '#999',
+                    background: '#fff',
+                    border: '1px solid #E9DFCE',
+                    borderRadius: 12
+                  }}>
+                    Henüz ürün eklenmemiş.
+                  </div>
+                )}
               </div>
             </div>
           </section>
-        ) : tab==='orders' ? (
+        ) : tab === 'orders' ? (
           <SiparislerScreen isMobile={isMobile} />
-        ) : tab==='income' ? (
+        ) : tab === 'income' ? (
           <GelirRaporlariScreen isMobile={isMobile} />
         ) : (
           <section style={{ maxWidth: 800 }}>
             <h2 style={{ fontWeight: 700, fontSize: 24, marginBottom: 24 }}>Çiftlik Bilgileri</h2>
-            
+
             {/* Biyografi */}
             <div style={{ marginBottom: 32 }}>
               <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Ön Yazı (Çiftlik Hakkında)</label>
-              <textarea 
-                className="form-input" 
-                style={{...inputStyle, minHeight: 100}} 
-                value={farmInfo.farmer_biografi} 
-                onChange={e=>setFarmInfo({...farmInfo, farmer_biografi:e.target.value})}
+              <textarea
+                className="form-input"
+                style={{ ...inputStyle, minHeight: 100 }}
+                value={farmInfo.farmer_biografi}
+                onChange={e => setFarmInfo({ ...farmInfo, farmer_biografi: e.target.value })}
                 placeholder="Çiftliğiniz hakkında bilgi verin..."
               />
             </div>
@@ -1274,7 +1187,7 @@ export default function Dashboard() {
             {/* Çiftlik Fotoğrafları */}
             <div style={{ marginBottom: 32 }}>
               <label style={{ display: 'block', marginBottom: 16, fontWeight: 600 }}>Çiftlik Fotoğrafları</label>
-              
+
               {/* Mevcut Resimler */}
               {farmInfo.images && farmInfo.images.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
@@ -1282,8 +1195,8 @@ export default function Dashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
                     {farmInfo.images.map((image, idx) => (
                       <div key={image.id} style={{ position: 'relative' }}>
-                        <img 
-                          src={image.farmer_image} 
+                        <img
+                          src={image.farmer_image}
                           alt={`Çiftlik resmi ${idx + 1}`}
                           style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 8, border: '2px solid #E9DFCE' }}
                         />
@@ -1318,8 +1231,8 @@ export default function Dashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
                     {farmInfo.newImages.map((image, idx) => (
                       <div key={idx} style={{ position: 'relative' }}>
-                        <img 
-                          src={URL.createObjectURL(image)} 
+                        <img
+                          src={URL.createObjectURL(image)}
                           alt={`Yeni resim ${idx + 1}`}
                           style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 8, border: '2px solid #40693E' }}
                         />
@@ -1348,27 +1261,27 @@ export default function Dashboard() {
               )}
 
               {/* Resim Ekleme Butonu */}
-              <div style={{ 
-                border: '2px dashed #E9DFCE', 
-                borderRadius: 8, 
-                padding: 32, 
+              <div style={{
+                border: '2px dashed #E9DFCE',
+                borderRadius: 8,
+                padding: 32,
                 textAlign: 'center',
                 background: '#fafafa',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease'
               }}
-              onClick={() => document.getElementById('farmImages')?.click()}
+                onClick={() => document.getElementById('farmImages')?.click()}
               >
                 <div style={{ fontSize: 48, color: '#ccc', marginBottom: 8 }}>+</div>
                 <div style={{ color: '#666' }}>Çiftlik fotoğrafı eklemek için tıklayın</div>
                 <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>JPEG, PNG, WebP - Maksimum 5MB</div>
               </div>
-              <input 
+              <input
                 id="farmImages"
-                type="file" 
-                accept="image/*" 
+                type="file"
+                accept="image/*"
                 multiple
-                onChange={handleAddFarmImage} 
+                onChange={handleAddFarmImage}
                 style={{ display: 'none' }}
               />
             </div>
@@ -1376,16 +1289,16 @@ export default function Dashboard() {
             {/* Sertifikalar */}
             <div style={{ marginBottom: 32 }}>
               <label style={{ display: 'block', marginBottom: 16, fontWeight: 600 }}>Sertifikalarım</label>
-              
+
               {/* Mevcut Sertifikalar */}
               {farmInfo.certificates && farmInfo.certificates.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <h4 style={{ marginBottom: 12, color: '#666' }}>Mevcut Sertifikalar:</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {farmInfo.certificates.map((cert, idx) => (
-                      <div key={cert.id} style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                      <div key={cert.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: 12,
                         border: '1px solid #E9DFCE',
@@ -1393,7 +1306,7 @@ export default function Dashboard() {
                         background: '#fff'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <div style={{ 
+                          <div style={{
                             padding: 8,
                             background: '#f8f9fa',
                             borderRadius: 4,
@@ -1406,7 +1319,7 @@ export default function Dashboard() {
                           <span>Sertifika {idx + 1}</span>
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button 
+                          <button
                             onClick={() => window.open(cert.images, '_blank')}
                             style={{
                               background: '#40693E',
@@ -1447,9 +1360,9 @@ export default function Dashboard() {
                   <h4 style={{ marginBottom: 12, color: '#666' }}>Yüklenecek Sertifikalar:</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {farmInfo.newCertificates.map((cert, idx) => (
-                      <div key={idx} style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                      <div key={idx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: 12,
                         border: '2px solid #40693E',
@@ -1457,7 +1370,7 @@ export default function Dashboard() {
                         background: '#f8fff8'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <div style={{ 
+                          <div style={{
                             padding: 8,
                             background: '#40693E',
                             borderRadius: 4,
@@ -1490,33 +1403,33 @@ export default function Dashboard() {
               )}
 
               {/* Sertifika Ekleme Butonu */}
-              <div style={{ 
-                border: '2px dashed #E9DFCE', 
-                borderRadius: 8, 
-                padding: 32, 
+              <div style={{
+                border: '2px dashed #E9DFCE',
+                borderRadius: 8,
+                padding: 32,
                 textAlign: 'center',
                 background: '#fafafa',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease'
               }}
-              onClick={() => document.getElementById('farmCertificates')?.click()}
+                onClick={() => document.getElementById('farmCertificates')?.click()}
               >
                 <div style={{ fontSize: 48, color: '#ccc', marginBottom: 8 }}>📄</div>
                 <div style={{ color: '#666' }}>Sertifika eklemek için tıklayın</div>
                 <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>PDF, JPEG, PNG - Maksimum 5MB</div>
               </div>
-              <input 
+              <input
                 id="farmCertificates"
-                type="file" 
-                accept="application/pdf,image/*" 
+                type="file"
+                accept="application/pdf,image/*"
                 multiple
-                onChange={handleAddCertificate} 
+                onChange={handleAddCertificate}
                 style={{ display: 'none' }}
               />
             </div>
 
             {/* Kaydet Butonu */}
-            <button 
+            <button
               onClick={handleSaveStoreInfo}
               style={{
                 ...greenBtn,
@@ -1531,7 +1444,7 @@ export default function Dashboard() {
       </main>
 
       {/* Mobil Menü Overlay */}
-      <div 
+      <div
         style={{
           display: 'none',
           position: 'fixed',
