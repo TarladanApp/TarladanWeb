@@ -4,10 +4,13 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 30000, // 30 saniye timeout ekle (Render soğuk açılış için önemli)
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+console.log('API Client initialized with Base URL:', API_URL);
 
 // Token'ı header'a ekle
 api.interceptors.request.use((config) => {
